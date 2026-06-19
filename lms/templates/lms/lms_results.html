@@ -1,0 +1,108 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<section class="oh-wrapper oh-main__topbar" x-data="{searchShow:false}">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <h1 class="oh-main__titlebar-title fw-bold">{% trans "LMS — Test Results" %}</h1>
+        <a class="oh-main__titlebar-search-toggle" role="button" @click="searchShow=!searchShow">
+            <ion-icon name="search-outline" class="oh-main__titlebar-serach-icon"></ion-icon>
+        </a>
+    </div>
+    <div class="oh-main__titlebar oh-main__titlebar--right">
+        <form x-show="searchShow" x-transition
+              action="{% url 'lms-results' %}" method="get">
+            <input type="text" name="search" class="oh-input oh-input--small"
+                   placeholder="{% trans 'Search employee or course…' %}"
+                   value="{{ request.GET.search }}" />
+        </form>
+    </div>
+</section>
+
+<div id="ohMessages"></div>
+
+<div class="oh-wrapper">
+{% if attempts %}
+<div class="oh-table_sticky--wrapper">
+    <div class="oh-sticky-table">
+        <div class="oh-sticky-table__table">
+            <div class="oh-sticky-table__thead">
+                <div class="oh-sticky-table__tr">
+                    <div class="oh-sticky-table__th">{% trans "Employee" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "Course" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "Attempt" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "Score" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "Result" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "Tab Switches" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "Suspicious" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "Date" %}</div>
+                    <div class="oh-sticky-table__th oh-sticky-table__right">{% trans "Details" %}</div>
+                </div>
+            </div>
+            <div class="oh-sticky-table__tbody">
+                {% for attempt in attempts %}
+                <div class="oh-sticky-table__tr">
+                    <div class="oh-sticky-table__td">{{ attempt.assignment.employee }}</div>
+                    <div class="oh-sticky-table__td">{{ attempt.assignment.course.title }}</div>
+                    <div class="oh-sticky-table__td">#{{ attempt.attempt_number }}</div>
+                    <div class="oh-sticky-table__td fw-bold">
+                        {% if attempt.is_submitted %}{{ attempt.score }}%{% else %}<span class="text-muted">{% trans "In progress" %}</span>{% endif %}
+                    </div>
+                    <div class="oh-sticky-table__td">
+                        {% if attempt.is_submitted %}
+                            {% if attempt.passed %}
+                            <span class="oh-badge oh-badge--success">{% trans "PASS" %}</span>
+                            {% else %}
+                            <span class="oh-badge oh-badge--danger">{% trans "FAIL" %}</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="oh-badge oh-badge--warning">{% trans "Pending" %}</span>
+                        {% endif %}
+                    </div>
+                    <div class="oh-sticky-table__td">{{ attempt.tab_switch_count }}</div>
+                    <div class="oh-sticky-table__td">
+                        {% if attempt.is_suspicious %}
+                        <span class="oh-badge oh-badge--danger">{% trans "Yes" %}</span>
+                        {% else %}—{% endif %}
+                    </div>
+                    <div class="oh-sticky-table__td">{{ attempt.started_at|date:"d-M-Y H:i" }}</div>
+                    <div class="oh-sticky-table__td oh-sticky-table__right">
+                        {% if attempt.is_submitted %}
+                        <a href="{% url 'lms-test-result' attempt.id %}"
+                           class="oh-btn oh-btn--light-bkg p-3" title="{% trans 'View' %}">
+                            <ion-icon name="eye-outline"></ion-icon>
+                        </a>
+                        {% else %}—{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="oh-pagination mt-2">
+        <span class="oh-pagination__page">{% trans "Page" %} {{ attempts.number }} {% trans "of" %} {{ attempts.paginator.num_pages }}</span>
+        <nav class="oh-pagination__nav">
+            <ul class="oh-pagination__items">
+                {% if attempts.has_previous %}
+                <li class="oh-pagination__item oh-pagination__item--wide">
+                    <a href="?{{ pd }}&page={{ attempts.previous_page_number }}" class="oh-pagination__link">{% trans "Previous" %}</a>
+                </li>
+                {% endif %}
+                {% if attempts.has_next %}
+                <li class="oh-pagination__item oh-pagination__item--wide">
+                    <a href="?{{ pd }}&page={{ attempts.next_page_number }}" class="oh-pagination__link">{% trans "Next" %}</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% else %}
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;">
+    <img style="width:150px;height:150px;" src="{% static 'images/ui/no-results.png' %}" alt="" />
+    <h5 class="oh-404__subtitle mt-3">{% trans "No test attempts yet." %}</h5>
+</div>
+{% endif %}
+</div>
+{% endblock %}

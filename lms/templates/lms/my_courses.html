@@ -1,0 +1,107 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<section class="oh-wrapper oh-main__topbar">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <h1 class="oh-main__titlebar-title fw-bold">{% trans "My Courses" %}</h1>
+    </div>
+</section>
+
+<div id="ohMessages"></div>
+
+<div class="oh-wrapper">
+{% if assignments_data %}
+<div class="row g-3 mt-1">
+    {% for d in assignments_data %}
+    <div class="col-md-4">
+        <div class="oh-kanban-card h-100"
+             style="border-top:3px solid {% if d.asgn.is_completed %}#22c55e{% else %}#6366f1{% endif %};">
+
+            <div class="oh-kanban-card__details p-3">
+                <!-- Status badge -->
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="fw-bold mb-0">{{ d.asgn.course.title }}</h5>
+                    {% if d.asgn.is_completed %}
+                    <span class="oh-badge oh-badge--success">{% trans "Completed" %}</span>
+                    {% elif d.has_active %}
+                    <span class="oh-badge oh-badge--warning">{% trans "In Progress" %}</span>
+                    {% elif d.attempts_taken %}
+                    <span class="oh-badge oh-badge--danger">{% trans "Attempted" %}</span>
+                    {% else %}
+                    <span class="oh-badge oh-badge--info">{% trans "Pending" %}</span>
+                    {% endif %}
+                </div>
+
+                {% if d.asgn.course.description %}
+                <p class="text-muted small mb-2">{{ d.asgn.course.description|truncatechars:100 }}</p>
+                {% endif %}
+
+                <!-- Test stats -->
+                {% if d.config %}
+                <div class="d-flex gap-2 mb-3 flex-wrap">
+                    <span class="oh-badge" style="background:#f3f4f6;color:#374151;">
+                        <ion-icon name="time-outline" class="me-1"></ion-icon>
+                        {{ d.config.duration_minutes }} {% trans "min" %}
+                    </span>
+                    <span class="oh-badge" style="background:#f3f4f6;color:#374151;">
+                        <ion-icon name="trophy-outline" class="me-1"></ion-icon>
+                        {% trans "Pass" %}: {{ d.config.pass_percentage }}%
+                    </span>
+                    <span class="oh-badge" style="background:#f3f4f6;color:#374151;">
+                        <ion-icon name="refresh-outline" class="me-1"></ion-icon>
+                        {{ d.attempts_taken }}/{{ d.max_attempts }} {% trans "attempts" %}
+                    </span>
+                </div>
+                {% endif %}
+
+                <!-- Last score -->
+                {% if d.latest_attempt and d.latest_attempt.is_submitted %}
+                <div class="oh-alert {% if d.latest_attempt.passed %}oh-alert--success{% else %}oh-alert--danger{% endif %} mb-2 py-1 px-2 small">
+                    {% trans "Last score" %}: <strong>{{ d.latest_attempt.score }}%</strong>
+                    {% if d.latest_attempt.passed %}✓ {% trans "Passed" %}{% else %}✗ {% trans "Failed" %}{% endif %}
+                </div>
+                {% endif %}
+
+                <div class="d-flex gap-2 mt-2">
+                    <a href="{{ d.asgn.course.drive_link }}" target="_blank"
+                       class="oh-btn oh-btn--secondary oh-btn--sm flex-fill">
+                        <ion-icon name="open-outline" class="me-1"></ion-icon>{% trans "Open Course" %}
+                    </a>
+
+                    {% if d.config %}
+                        {% if d.can_start %}
+                        <a href="{% url 'lms-start-test' d.asgn.id %}"
+                           class="oh-btn oh-btn--primary oh-btn--sm flex-fill"
+                           onclick="return confirm('{% trans "Ready to start the test? Make sure you have read the course material." %}');">
+                            <ion-icon name="play-outline" class="me-1"></ion-icon>
+                            {% if d.has_active %}{% trans "Resume Test" %}{% else %}{% trans "Start Test" %}{% endif %}
+                        </a>
+                        {% elif d.asgn.is_completed %}
+                        <a href="{% url 'lms-test-result' d.passed_attempt.id %}"
+                           class="oh-btn oh-btn--light oh-btn--sm flex-fill">
+                            <ion-icon name="eye-outline" class="me-1"></ion-icon>{% trans "View Result" %}
+                        </a>
+                        {% else %}
+                        <button class="oh-btn oh-btn--light oh-btn--sm flex-fill" disabled>
+                            {% trans "Max attempts reached" %}
+                        </button>
+                        {% endif %}
+                    {% else %}
+                    <span class="oh-badge oh-badge--warning align-self-center">{% trans "No test configured" %}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;">
+    <ion-icon name="book-outline" style="font-size:80px;color:#d1d5db;"></ion-icon>
+    <h5 class="oh-404__subtitle mt-3">{% trans "No courses have been assigned to you yet." %}</h5>
+</div>
+{% endif %}
+</div>
+{% endblock %}

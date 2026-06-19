@@ -1,0 +1,50 @@
+{% load i18n %}
+<div class="oh-modal__dialog-header">
+    <h2 class="oh-modal__dialog-title">{% trans "Test Configuration" %} — {{ course.title }}</h2>
+    <button type="button" class="oh-modal__close" aria-label="Close">
+        <ion-icon name="close-outline"></ion-icon>
+    </button>
+</div>
+<div class="oh-modal__dialog-body">
+    <form hx-post="{% url 'lms-test-config' course.id %}"
+          hx-target="#testConfigModalTarget"
+          class="oh-profile-section">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-4">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.duration_minutes.label }}</label>
+                    {{ form.duration_minutes }}
+                    {% for e in form.duration_minutes.errors %}<span class="oh-input__error">{{ e }}</span>{% endfor %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.pass_percentage.label }}</label>
+                    {{ form.pass_percentage }}
+                    {% for e in form.pass_percentage.errors %}<span class="oh-input__error">{{ e }}</span>{% endfor %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.max_attempts.label }}</label>
+                    {{ form.max_attempts }}
+                    {% for e in form.max_attempts.errors %}<span class="oh-input__error">{{ e }}</span>{% endfor %}
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.instructions.label }}</label>
+                    {{ form.instructions }}
+                </div>
+            </div>
+        </div>
+        <div class="oh-modal__dialog-footer">
+            <button type="button" class="oh-btn oh-btn--light"
+                    onclick="$('#testConfigModal').removeClass('oh-modal--show')">
+                {% trans "Cancel" %}
+            </button>
+            <button type="submit" class="oh-btn oh-btn--secondary">{% trans "Save" %}</button>
+        </div>
+    </form>
+</div>

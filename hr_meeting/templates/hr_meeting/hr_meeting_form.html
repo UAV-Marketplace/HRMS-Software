@@ -1,0 +1,129 @@
+{% load i18n %}
+
+<div class="oh-modal__dialog-header">
+    <h2 class="oh-modal__dialog-title">
+        {% if record_id %}{% trans "Update Meeting Record" %}{% else %}{% trans "Create Meeting Record" %}{% endif %}
+    </h2>
+    <button type="button" class="oh-modal__close" aria-label="Close">
+        <ion-icon name="close-outline"></ion-icon>
+    </button>
+</div>
+
+<div class="oh-modal__dialog-body">
+    {% if form.errors %}
+    <div class="oh-wrapper">
+        <div class="oh-alert-container">
+            {% for error in form.non_field_errors %}
+            <div class="oh-alert oh-alert--animated oh-alert--danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <form {% if record_id %}
+        hx-post="{% url 'hr-meeting-update' record_id %}"
+    {% else %}
+        hx-post="{% url 'hr-meeting-create' %}"
+    {% endif %}
+        hx-target="#objectCreateModalTarget"
+        hx-encoding="multipart/form-data"
+        class="oh-profile-section">
+        {% csrf_token %}
+
+        <div class="row">
+            <!-- Date -->
+            <div class="col-md-6">
+                <div class="oh-input-group">
+                    <label class="oh-label" for="{{ form.meeting_date.id_for_label }}">
+                        {{ form.meeting_date.label }} <span class="oh-required">*</span>
+                    </label>
+                    {{ form.meeting_date }}
+                    {% for error in form.meeting_date.errors %}
+                    <span class="oh-input__error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Purpose of Meeting -->
+            <div class="col-md-6">
+                <div class="oh-input-group">
+                    <label class="oh-label" for="{{ form.purpose.id_for_label }}">
+                        {{ form.purpose.label }} <span class="oh-required">*</span>
+                    </label>
+                    {{ form.purpose }}
+                    {% for error in form.purpose.errors %}
+                    <span class="oh-input__error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- People Involved -->
+            <div class="col-md-12">
+                <div class="oh-input-group">
+                    <label class="oh-label" for="{{ form.people_involved.id_for_label }}">
+                        {{ form.people_involved.label }} <span class="oh-required">*</span>
+                    </label>
+                    {{ form.people_involved }}
+                    {% for error in form.people_involved.errors %}
+                    <span class="oh-input__error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Discussion -->
+            <div class="col-md-12">
+                <div class="oh-input-group">
+                    <label class="oh-label" for="{{ form.discussion.id_for_label }}">
+                        {{ form.discussion.label }}
+                    </label>
+                    {{ form.discussion }}
+                    <small class="oh-input__hint text-muted">
+                        {% trans "Mention what things are discussed in the meeting." %}
+                    </small>
+                    {% for error in form.discussion.errors %}
+                    <span class="oh-input__error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Solutions -->
+            <div class="col-md-12">
+                <div class="oh-input-group">
+                    <label class="oh-label" for="{{ form.solutions.id_for_label }}">
+                        {{ form.solutions.label }}
+                    </label>
+                    {{ form.solutions }}
+                    <small class="oh-input__hint text-muted">
+                        {% trans "Mention the solutions offered by HR." %}
+                    </small>
+                    {% for error in form.solutions.errors %}
+                    <span class="oh-input__error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- File Upload -->
+            <div class="col-md-12">
+                <div class="oh-input-group">
+                    <label class="oh-label" for="{{ form.attachment.id_for_label }}">
+                        {{ form.attachment.label }}
+                    </label>
+                    {{ form.attachment }}
+                    {% for error in form.attachment.errors %}
+                    <span class="oh-input__error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="oh-modal__dialog-footer">
+            <button type="button" class="oh-btn oh-btn--light oh-btn--shadow"
+                onclick="$('#objectCreateModal').removeClass('oh-modal--show')">
+                {% trans "Cancel" %}
+            </button>
+            <button type="submit" class="oh-btn oh-btn--secondary oh-btn--shadow">
+                {% if record_id %}{% trans "Update" %}{% else %}{% trans "Save" %}{% endif %}
+            </button>
+        </div>
+    </form>
+</div>

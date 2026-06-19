@@ -1,0 +1,91 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<section class="oh-wrapper oh-main__topbar">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <a href="{% url 'lms-courses' %}" class="oh-btn oh-btn--light-bkg me-2">
+            <ion-icon name="arrow-back-outline"></ion-icon>
+        </a>
+        <h1 class="oh-main__titlebar-title fw-bold">
+            {% trans "Questions" %} — {{ course.title }}
+        </h1>
+    </div>
+    <div class="oh-main__titlebar oh-main__titlebar--right">
+        <button class="oh-btn oh-btn--secondary oh-btn--shadow"
+                data-toggle="oh-modal-toggle" data-target="#questionModal"
+                hx-get="{% url 'lms-question-create' course.id %}"
+                hx-target="#questionModalTarget">
+            <ion-icon name="add-outline" class="me-1"></ion-icon>{% trans "Add Question" %}
+        </button>
+    </div>
+</section>
+
+<div id="ohMessages"></div>
+
+<div class="oh-wrapper">
+    {% if questions %}
+    <div class="oh-table_sticky--wrapper">
+        <div class="oh-sticky-table">
+            <div class="oh-sticky-table__table">
+                <div class="oh-sticky-table__thead">
+                    <div class="oh-sticky-table__tr">
+                        <div class="oh-sticky-table__th" style="width:40px;">#</div>
+                        <div class="oh-sticky-table__th">{% trans "Question" %}</div>
+                        <div class="oh-sticky-table__th">{% trans "Options" %}</div>
+                        <div class="oh-sticky-table__th oh-sticky-table__right">{% trans "Actions" %}</div>
+                    </div>
+                </div>
+                <div class="oh-sticky-table__tbody">
+                    {% for q in questions %}
+                    <div class="oh-sticky-table__tr">
+                        <div class="oh-sticky-table__td text-muted">{{ forloop.counter }}</div>
+                        <div class="oh-sticky-table__td fw-bold">{{ q.question_text }}</div>
+                        <div class="oh-sticky-table__td">
+                            {% for opt in q.options.all %}
+                            <span class="me-2 {% if opt.is_correct %}text-success fw-bold{% else %}text-muted{% endif %}">
+                                {% if opt.is_correct %}<ion-icon name="checkmark-circle-outline"></ion-icon>{% endif %}
+                                {{ opt.option_text }}
+                            </span><br>
+                            {% endfor %}
+                        </div>
+                        <div class="oh-sticky-table__td oh-sticky-table__right">
+                            <div class="oh-btn-group">
+                                <button class="oh-btn oh-btn--light-bkg p-3"
+                                        title="{% trans 'Edit' %}"
+                                        data-toggle="oh-modal-toggle" data-target="#questionModal"
+                                        hx-get="{% url 'lms-question-update' q.id %}"
+                                        hx-target="#questionModalTarget">
+                                    <ion-icon name="create-outline"></ion-icon>
+                                </button>
+                                <a href="{% url 'lms-question-delete' q.id %}"
+                                   class="oh-btn oh-btn--danger-outline oh-btn--light-bkg p-3"
+                                   onclick="return confirm('{% trans "Delete this question?" %}')"
+                                   title="{% trans 'Delete' %}">
+                                    <ion-icon name="trash-outline"></ion-icon>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;">
+        <ion-icon name="help-circle-outline" style="font-size:80px;color:#d1d5db;"></ion-icon>
+        <h5 class="oh-404__subtitle mt-3">{% trans "No questions yet. Click 'Add Question' to get started." %}</h5>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Question modal -->
+<div class="oh-modal" id="questionModal" role="dialog" aria-hidden="true">
+    <div class="oh-modal__dialog">
+        <div id="questionModalTarget"></div>
+    </div>
+</div>
+
+{% endblock %}

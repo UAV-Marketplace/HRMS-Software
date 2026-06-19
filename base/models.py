@@ -601,7 +601,7 @@ class EmployeeShiftSchedule(HorillaModel):
         blank=True,
         verbose_name=_("Automatic Check Out Time"),
         help_text=_(
-            "Time at which the horilla will automatically check out the employee attendance if they forget."
+            "Time at which the Tiltas Systems LLP will automatically check out the employee attendance if they forget."
         ),
     )
     company_id = models.ManyToManyField(Company, blank=True, verbose_name=_("Company"))

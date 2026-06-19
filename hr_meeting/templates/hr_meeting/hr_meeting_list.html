@@ -1,0 +1,142 @@
+{% load i18n %}
+{% load static %}
+
+{% if records %}
+<div class="oh-table_sticky--wrapper">
+    <div class="oh-sticky-table">
+        <div class="oh-sticky-table__table">
+            <div class="oh-sticky-table__thead">
+                <div class="oh-sticky-table__tr">
+                    <div class="oh-sticky-table__th">{% trans "Date" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "Purpose of Meeting" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "People Involved" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "Discussion" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "Solutions" %}</div>
+                    <div class="oh-sticky-table__th">{% trans "Attachment" %}</div>
+                    <div class="oh-sticky-table__th oh-sticky-table__right">{% trans "Actions" %}</div>
+                </div>
+            </div>
+            <div class="oh-sticky-table__tbody">
+                {% for record in records %}
+                <div class="oh-sticky-table__tr">
+                    <div class="oh-sticky-table__td">
+                        {{ record.meeting_date|date:"d-M-Y" }}
+                    </div>
+                    <div class="oh-sticky-table__td">{{ record.purpose }}</div>
+                    <div class="oh-sticky-table__td">
+                        {% for emp in record.people_involved.all %}
+                            <span class="oh-badge oh-badge--info me-1">{{ emp.get_full_name }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="oh-sticky-table__td">
+                        {% if record.discussion %}
+                            <span title="{{ record.discussion }}">
+                                {{ record.discussion|truncatechars:60 }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </div>
+                    <div class="oh-sticky-table__td">
+                        {% if record.solutions %}
+                            <span title="{{ record.solutions }}">
+                                {{ record.solutions|truncatechars:60 }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </div>
+                    <div class="oh-sticky-table__td">
+                        {% if record.attachment %}
+                            <a href="{{ record.attachment.url }}" target="_blank"
+                               class="oh-btn oh-btn--light-bkg oh-btn--sm" title="{% trans 'Download' %}">
+                                <ion-icon name="attach-outline"></ion-icon>
+                            </a>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </div>
+                    <div class="oh-sticky-table__td oh-sticky-table__right">
+                        <div class="oh-btn-group">
+                            <button class="oh-btn oh-btn--light-bkg p-3"
+                                title="{% trans 'Edit' %}"
+                                data-toggle="oh-modal-toggle"
+                                data-target="#objectCreateModal"
+                                hx-get="{% url 'hr-meeting-update' record.id %}"
+                                hx-target="#objectCreateModalTarget">
+                                <ion-icon name="create-outline"></ion-icon>
+                            </button>
+                            <form action="{% url 'hr-meeting-delete' record.id %}" method="post"
+                                onsubmit="return confirm('{% trans "Are you sure you want to delete this meeting record?" %}');"
+                                hx-post="{% url 'hr-meeting-delete' record.id %}"
+                                hx-target="#meetingList"
+                                hx-confirm="{% trans 'Are you sure you want to delete this meeting record?' %}"
+                                style="display:contents">
+                                {% csrf_token %}
+                                <button type="submit"
+                                    class="oh-btn oh-btn--danger-outline oh-btn--light-bkg p-3"
+                                    title="{% trans 'Delete' %}">
+                                    <ion-icon name="trash-outline"></ion-icon>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="oh-pagination">
+        <span class="oh-pagination__page">
+            {% trans "Page" %} {{ records.number }} {% trans "of" %} {{ records.paginator.num_pages }}.
+        </span>
+        <nav class="oh-pagination__nav">
+            <div class="oh-pagination__input-container me-3">
+                <span class="oh-pagination__label me-1">{% trans "Page" %}</span>
+                <input type="number" name="page" class="oh-pagination__input"
+                    value="{{ records.number }}"
+                    hx-get="{% url 'hr-meeting-filter' %}?{{ pd }}"
+                    hx-target="#meetingList"
+                    min="1" />
+                <span class="oh-pagination__label">{% trans "of" %} {{ records.paginator.num_pages }}</span>
+            </div>
+            <ul class="oh-pagination__items">
+                {% if records.has_previous %}
+                <li class="oh-pagination__item oh-pagination__item--wide">
+                    <a hx-target="#meetingList"
+                       hx-get="{% url 'hr-meeting-filter' %}?{{ pd }}&page=1"
+                       class="oh-pagination__link">{% trans "First" %}</a>
+                </li>
+                <li class="oh-pagination__item oh-pagination__item--wide">
+                    <a hx-target="#meetingList"
+                       hx-get="{% url 'hr-meeting-filter' %}?{{ pd }}&page={{ records.previous_page_number }}"
+                       class="oh-pagination__link">{% trans "Previous" %}</a>
+                </li>
+                {% endif %}
+                {% if records.has_next %}
+                <li class="oh-pagination__item oh-pagination__item--wide">
+                    <a hx-target="#meetingList"
+                       hx-get="{% url 'hr-meeting-filter' %}?{{ pd }}&page={{ records.next_page_number }}"
+                       class="oh-pagination__link">{% trans "Next" %}</a>
+                </li>
+                <li class="oh-pagination__item oh-pagination__item--wide">
+                    <a hx-target="#meetingList"
+                       hx-get="{% url 'hr-meeting-filter' %}?{{ pd }}&page={{ records.paginator.num_pages }}"
+                       class="oh-pagination__link">{% trans "Last" %}</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+
+{% else %}
+<div style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:60vh;">
+    <img style="width:150px;height:150px;"
+         src="{% static 'images/ui/no-results.png' %}"
+         class="oh-404__image mb-4" alt="" />
+    <h5 class="oh-404__subtitle">{% trans "No meeting records found." %}</h5>
+</div>
+{% endif %}

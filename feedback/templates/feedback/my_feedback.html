@@ -1,0 +1,134 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<section class="oh-wrapper oh-main__topbar">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <h1 class="oh-main__titlebar-title fw-bold">{% trans "My Feedback" %}</h1>
+    </div>
+</section>
+
+<div id="ohMessages"></div>
+
+<div class="oh-wrapper">
+
+    {% if stats and stats.total %}
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="oh-kanban-card p-3 text-center" style="border-top:3px solid #6366f1;">
+                <div style="font-size:2.5rem;font-weight:900;color:#6366f1;">{{ stats.total }}</div>
+                <div class="text-muted small mt-1">{% trans "Total Feedback Received" %}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="oh-kanban-card p-3 text-center" style="border-top:3px solid #f59e0b;">
+                <div style="font-size:2.5rem;font-weight:900;color:#f59e0b;">
+                    {% if stats.avg_rating %}{{ stats.avg_rating|floatformat:1 }}{% else %}—{% endif %}
+                </div>
+                <div class="text-muted small mt-1">{% trans "Average Rating" %} / 5</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="oh-kanban-card p-3 text-center" style="border-top:3px solid #22c55e;">
+                <div style="font-size:2.5rem;font-weight:900;color:#22c55e;">
+                    {% if stats.avg_rating %}
+                    {% with avg=stats.avg_rating %}
+                    {% if avg >= 4.5 %}★★★★★
+                    {% elif avg >= 3.5 %}★★★★☆
+                    {% elif avg >= 2.5 %}★★★☆☆
+                    {% elif avg >= 1.5 %}★★☆☆☆
+                    {% else %}★☆☆☆☆
+                    {% endif %}
+                    {% endwith %}
+                    {% else %}—{% endif %}
+                </div>
+                <div class="text-muted small mt-1">{% trans "Overall Rating" %}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Privacy notice -->
+    <div class="oh-alert oh-alert--info mb-4 d-flex align-items-center gap-2">
+        <ion-icon name="eye-off-outline" style="font-size:1.2rem;flex-shrink:0;"></ion-icon>
+        <span>{% trans "Feedback is shown anonymously. The identities of colleagues who submitted feedback are never revealed." %}</span>
+    </div>
+
+    {% if feedbacks %}
+    <div class="row g-3">
+        {% for fb in feedbacks %}
+        <div class="col-md-6">
+            <div class="oh-kanban-card p-3 h-100"
+                 style="border-left:4px solid
+                 {% if fb.rating >= 4 %}#22c55e
+                 {% elif fb.rating == 3 %}#f59e0b
+                 {% else %}#ef4444{% endif %};">
+
+                <!-- Rating stars -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div style="color:#f59e0b;font-size:1.2rem;letter-spacing:1px;">
+                        {% for i in "12345" %}
+                        {% if forloop.counter <= fb.rating %}★{% else %}☆{% endif %}
+                        {% endfor %}
+                        <span class="ms-1 fw-bold" style="font-size:.9rem;color:#374151;">
+                            {{ fb.rating }}/5
+                        </span>
+                    </div>
+                    <span class="oh-badge"
+                          style="background:#f3f4f6;color:#6b7280;font-size:.72rem;">
+                        {{ fb.created_at|date:"d M Y" }}
+                    </span>
+                </div>
+
+                <!-- Feedback text -->
+                <p class="mb-2" style="line-height:1.6;color:#374151;">{{ fb.feedback_text }}</p>
+
+                <!-- Anonymous footer -->
+                <div class="d-flex align-items-center gap-1 mt-auto pt-2"
+                     style="border-top:1px solid #f3f4f6;">
+                    <ion-icon name="person-circle-outline" style="color:#9ca3af;"></ion-icon>
+                    <span class="text-muted small">{% trans "Anonymous Colleague" %}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if feedbacks.paginator.num_pages > 1 %}
+    <div class="oh-pagination mt-4">
+        <span class="oh-pagination__page">
+            {% trans "Page" %} {{ feedbacks.number }} {% trans "of" %} {{ feedbacks.paginator.num_pages }}
+        </span>
+        <nav class="oh-pagination__nav">
+            <ul class="oh-pagination__items">
+                {% if feedbacks.has_previous %}
+                <li class="oh-pagination__item oh-pagination__item--wide">
+                    <a href="?page={{ feedbacks.previous_page_number }}" class="oh-pagination__link">
+                        {% trans "Previous" %}
+                    </a>
+                </li>
+                {% endif %}
+                {% if feedbacks.has_next %}
+                <li class="oh-pagination__item oh-pagination__item--wide">
+                    <a href="?page={{ feedbacks.next_page_number }}" class="oh-pagination__link">
+                        {% trans "Next" %}
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:55vh;">
+        <ion-icon name="chatbubbles-outline" style="font-size:80px;color:#d1d5db;"></ion-icon>
+        <h5 class="oh-404__subtitle mt-3">{% trans "No feedback received yet." %}</h5>
+        <p class="text-muted small">{% trans "Feedback from your colleagues will appear here anonymously." %}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

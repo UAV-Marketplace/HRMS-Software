@@ -1,0 +1,55 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<!-- Top bar -->
+<section class="oh-wrapper oh-main__topbar" x-data="{searchShow: false}">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <h1 class="oh-main__titlebar-title fw-bold">{% trans "HR Meeting Records" %}</h1>
+        <a class="oh-main__titlebar-search-toggle" role="button" aria-label="Toggle Search"
+            @click="searchShow = !searchShow">
+            <ion-icon name="search-outline" class="oh-main__titlebar-serach-icon"></ion-icon>
+        </a>
+    </div>
+    <div class="oh-main__titlebar oh-main__titlebar--right">
+        <!-- Search -->
+        <form id="meetingSearchForm"
+            hx-get="{% url 'hr-meeting-filter' %}"
+            hx-target="#meetingList"
+            hx-trigger="keyup changed delay:400ms from:#meetingSearch"
+            class="oh-main__titlebar-search" x-show="searchShow" x-transition>
+            <input type="text" id="meetingSearch" name="search" class="oh-input oh-input--small"
+                placeholder="{% trans 'Search by purpose...' %}" />
+        </form>
+
+        <!-- Create button -->
+        <button class="oh-btn oh-btn--secondary oh-btn--shadow ms-2"
+            data-toggle="oh-modal-toggle"
+            data-target="#objectCreateModal"
+            hx-get="{% url 'hr-meeting-create' %}"
+            hx-target="#objectCreateModalTarget">
+            <ion-icon name="add-outline" class="me-1"></ion-icon>
+            {% trans "Create" %}
+        </button>
+    </div>
+</section>
+
+<!-- Messages -->
+<div id="ohMessages"></div>
+
+<!-- List container -->
+<div class="oh-wrapper" id="meetingListWrapper">
+    <div id="meetingList">
+        {% include "hr_meeting/hr_meeting_list.html" %}
+    </div>
+</div>
+
+<!-- Create / Edit Modal -->
+<div class="oh-modal" id="objectCreateModal" role="dialog" aria-hidden="true">
+    <div class="oh-modal__dialog">
+        <div id="objectCreateModalTarget"></div>
+    </div>
+</div>
+
+{% endblock %}

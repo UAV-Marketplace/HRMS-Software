@@ -1,0 +1,76 @@
+{% load i18n %}
+<div class="oh-modal__dialog-header">
+    <h2 class="oh-modal__dialog-title">
+        {% if question %}{% trans "Edit Question" %}{% else %}{% trans "Add Question" %}{% endif %}
+    </h2>
+    <button type="button" class="oh-modal__close" aria-label="Close">
+        <ion-icon name="close-outline"></ion-icon>
+    </button>
+</div>
+<div class="oh-modal__dialog-body">
+    <form {% if question %}
+              hx-post="{% url 'lms-question-update' question.id %}"
+          {% else %}
+              hx-post="{% url 'lms-question-create' course.id %}"
+          {% endif %}
+          hx-target="#questionModalTarget"
+          class="oh-profile-section">
+        {% csrf_token %}
+        <div class="oh-input-group">
+            <label class="oh-label">{{ form.question_text.label }} <span class="oh-required">*</span></label>
+            {{ form.question_text }}
+        </div>
+
+        <div class="row g-2 mt-1">
+            {% for key, label in form.fields.items %}{% endfor %}
+            <div class="col-md-6">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.option_a.label }}</label>
+                    {{ form.option_a }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.option_b.label }}</label>
+                    {{ form.option_b }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.option_c.label }}</label>
+                    {{ form.option_c }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.option_d.label }}</label>
+                    {{ form.option_d }}
+                </div>
+            </div>
+        </div>
+
+        <div class="oh-input-group mt-2">
+            <label class="oh-label">{{ form.correct_option.label }} <span class="oh-required">*</span></label>
+            <div class="d-flex gap-4 mt-1">
+                {% for choice_value, choice_label in form.correct_option.field.choices %}
+                <label class="d-flex align-items-center gap-1" style="cursor:pointer;">
+                    <input type="radio" name="correct_option" value="{{ choice_value }}"
+                           {% if form.correct_option.value == choice_value %}checked{% endif %}
+                           class="oh-switch__checkbox" style="width:16px;height:16px;">
+                    <span class="fw-bold">{{ choice_label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="oh-modal__dialog-footer">
+            <button type="button" class="oh-btn oh-btn--light"
+                    onclick="$('#questionModal').removeClass('oh-modal--show')">
+                {% trans "Cancel" %}
+            </button>
+            <button type="submit" class="oh-btn oh-btn--secondary">
+                {% if question %}{% trans "Update" %}{% else %}{% trans "Add Question" %}{% endif %}
+            </button>
+        </div>
+    </form>
+</div>

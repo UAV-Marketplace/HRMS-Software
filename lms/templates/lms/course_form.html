@@ -1,0 +1,63 @@
+{% load i18n %}
+<div class="oh-modal__dialog-header">
+    <h2 class="oh-modal__dialog-title">
+        {% if course_id %}{% trans "Update Course" %}{% else %}{% trans "Add Course" %}{% endif %}
+    </h2>
+    <button type="button" class="oh-modal__close" aria-label="Close">
+        <ion-icon name="close-outline"></ion-icon>
+    </button>
+</div>
+<div class="oh-modal__dialog-body">
+    {% if form.errors %}
+    <div class="oh-alert-container">
+        {% for error in form.non_field_errors %}
+        <div class="oh-alert oh-alert--animated oh-alert--danger">{{ error }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <form {% if course_id %}hx-post="{% url 'lms-course-update' course_id %}"
+          {% else %}hx-post="{% url 'lms-course-create' %}"{% endif %}
+          hx-target="#objectCreateModalTarget"
+          hx-encoding="multipart/form-data"
+          class="oh-profile-section">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.title.label }} <span class="oh-required">*</span></label>
+                    {{ form.title }}
+                    {% for e in form.title.errors %}<span class="oh-input__error">{{ e }}</span>{% endfor %}
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.drive_link.label }} <span class="oh-required">*</span></label>
+                    {{ form.drive_link }}
+                    <small class="text-muted">{% trans "Paste your Google Drive or Zoho Drive link." %}</small>
+                    {% for e in form.drive_link.errors %}<span class="oh-input__error">{{ e }}</span>{% endfor %}
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.description.label }}</label>
+                    {{ form.description }}
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.thumbnail.label }}</label>
+                    {{ form.thumbnail }}
+                </div>
+            </div>
+        </div>
+        <div class="oh-modal__dialog-footer">
+            <button type="button" class="oh-btn oh-btn--light"
+                    onclick="$('#objectCreateModal').removeClass('oh-modal--show')">
+                {% trans "Cancel" %}
+            </button>
+            <button type="submit" class="oh-btn oh-btn--secondary">
+                {% if course_id %}{% trans "Update" %}{% else %}{% trans "Save" %}{% endif %}
+            </button>
+        </div>
+    </form>
+</div>

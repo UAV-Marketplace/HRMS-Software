@@ -1,0 +1,143 @@
+{% load i18n %}
+{% load static %}
+
+{% if courses %}
+<div class="row g-3 mt-1">
+    {% for course in courses %}
+    <div class="col-md-4">
+        <div class="oh-kanban-card h-100" style="border-top:3px solid #6366f1;">
+            {% if course.thumbnail %}
+            <img src="{{ course.thumbnail.url }}"
+                 style="width:100%;height:140px;object-fit:cover;border-radius:6px 6px 0 0;"
+                 alt="{{ course.title }}">
+            {% else %}
+            <div style="width:100%;height:140px;background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                        border-radius:6px 6px 0 0;display:flex;align-items:center;justify-content:center;">
+                <ion-icon name="book-outline" style="font-size:48px;color:#fff;"></ion-icon>
+            </div>
+            {% endif %}
+
+            <div class="oh-kanban-card__details p-3">
+                <h5 class="fw-bold mb-1">{{ course.title }}</h5>
+                {% if course.description %}
+                <p class="text-muted small mb-2" style="min-height:36px;">{{ course.description|truncatechars:80 }}</p>
+                {% endif %}
+
+                <div class="d-flex gap-2 mb-3 flex-wrap">
+                    <span class="oh-badge oh-badge--info">
+                        <ion-icon name="help-circle-outline" class="me-1"></ion-icon>
+                        {{ course.question_count }} {% trans "Questions" %}
+                    </span>
+                    <span class="oh-badge oh-badge--warning">
+                        <ion-icon name="people-outline" class="me-1"></ion-icon>
+                        {{ course.assignment_count }} {% trans "Assigned" %}
+                    </span>
+                </div>
+
+                <a href="{{ course.drive_link }}" target="_blank"
+                   class="oh-btn oh-btn--secondary oh-btn--sm w-100 mb-2">
+                    <ion-icon name="open-outline" class="me-1"></ion-icon>{% trans "Open Course" %}
+                </a>
+
+                <div class="d-flex gap-1 flex-wrap mt-1">
+                    {% if request.user.is_superuser or perms.lms.change_course %}
+                    <button class="oh-btn oh-btn--light-bkg oh-btn--sm flex-fill"
+                            title="{% trans 'Edit' %}"
+                            data-toggle="oh-modal-toggle" data-target="#objectCreateModal"
+                            hx-get="{% url 'lms-course-update' course.id %}"
+                            hx-target="#objectCreateModalTarget">
+                        <ion-icon name="create-outline"></ion-icon>
+                    </button>
+                    {% endif %}
+
+                    {% if request.user.is_superuser or perms.lms.add_courseassignment %}
+                    <button class="oh-btn oh-btn--light-bkg oh-btn--sm flex-fill"
+                            title="{% trans 'Assign to Employees' %}"
+                            data-toggle="oh-modal-toggle" data-target="#assignModal"
+                            hx-get="{% url 'lms-course-assign' course.id %}"
+                            hx-target="#assignModalTarget">
+                        <ion-icon name="person-add-outline"></ion-icon>
+                    </button>
+                    <button class="oh-btn oh-btn--light-bkg oh-btn--sm flex-fill"
+                            title="{% trans 'Manage Assignments' %}"
+                            data-toggle="oh-modal-toggle" data-target="#manageAssignModal"
+                            hx-get="{% url 'lms-manage-assignments' course.id %}"
+                            hx-target="#manageAssignModalTarget">
+                        <ion-icon name="people-outline"></ion-icon>
+                    </button>
+                    {% endif %}
+
+                    <a class="oh-btn oh-btn--light-bkg oh-btn--sm flex-fill"
+                       title="{% trans 'Manage Questions' %}"
+                       href="{% url 'lms-question-management' course.id %}">
+                        <ion-icon name="list-outline"></ion-icon>
+                    </a>
+
+                    {% if request.user.is_superuser or perms.lms.change_testconfiguration %}
+                    <button class="oh-btn oh-btn--light-bkg oh-btn--sm flex-fill"
+                            title="{% trans 'Test Config' %}"
+                            data-toggle="oh-modal-toggle" data-target="#testConfigModal"
+                            hx-get="{% url 'lms-test-config' course.id %}"
+                            hx-target="#testConfigModalTarget">
+                        <ion-icon name="settings-outline"></ion-icon>
+                    </button>
+                    {% endif %}
+
+                    {% if request.user.is_superuser or perms.lms.delete_course %}
+                    <form hx-post="{% url 'lms-course-delete' course.id %}"
+                          hx-target="#courseList"
+                          hx-confirm="{% trans 'Delete this course and all its data?' %}"
+                          style="display:contents">
+                        {% csrf_token %}
+                        <button type="submit" class="oh-btn oh-btn--danger-outline oh-btn--sm flex-fill"
+                                title="{% trans 'Delete' %}">
+                            <ion-icon name="trash-outline"></ion-icon>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+<div class="oh-pagination mt-3">
+    <span class="oh-pagination__page">
+        {% trans "Page" %} {{ courses.number }} {% trans "of" %} {{ courses.paginator.num_pages }}
+    </span>
+    <nav class="oh-pagination__nav">
+        <div class="oh-pagination__input-container me-3">
+            <span class="oh-pagination__label me-1">{% trans "Page" %}</span>
+            <input type="number" name="page" class="oh-pagination__input"
+                   value="{{ courses.number }}"
+                   hx-get="{% url 'lms-course-filter' %}?{{ pd }}"
+                   hx-target="#courseList" min="1" />
+            <span class="oh-pagination__label">{% trans "of" %} {{ courses.paginator.num_pages }}</span>
+        </div>
+        <ul class="oh-pagination__items">
+            {% if courses.has_previous %}
+            <li class="oh-pagination__item oh-pagination__item--wide">
+                <a hx-target="#courseList"
+                   hx-get="{% url 'lms-course-filter' %}?{{ pd }}&page={{ courses.previous_page_number }}"
+                   class="oh-pagination__link">{% trans "Previous" %}</a>
+            </li>
+            {% endif %}
+            {% if courses.has_next %}
+            <li class="oh-pagination__item oh-pagination__item--wide">
+                <a hx-target="#courseList"
+                   hx-get="{% url 'lms-course-filter' %}?{{ pd }}&page={{ courses.next_page_number }}"
+                   class="oh-pagination__link">{% trans "Next" %}</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+
+{% else %}
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;">
+    <img style="width:150px;height:150px;" src="{% static 'images/ui/no-results.png' %}" alt="" />
+    <h5 class="oh-404__subtitle mt-3">{% trans "No courses found." %}</h5>
+</div>
+{% endif %}

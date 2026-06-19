@@ -1,0 +1,101 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<section class="oh-wrapper oh-main__topbar">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <a href="{% url 'lms-my-courses' %}" class="oh-btn oh-btn--light-bkg me-2">
+            <ion-icon name="arrow-back-outline"></ion-icon>
+        </a>
+        <h1 class="oh-main__titlebar-title fw-bold">{% trans "Test Result" %}</h1>
+    </div>
+</section>
+
+<div class="oh-wrapper" style="max-width:860px;margin:0 auto;">
+
+    <!-- Score card -->
+    <div class="oh-kanban-card p-4 mb-4 text-center"
+         style="border-top:4px solid {% if attempt.passed %}#22c55e{% else %}#ef4444{% endif %};">
+        <div style="font-size:3.5rem;font-weight:900;
+                    color:{% if attempt.passed %}#22c55e{% else %}#ef4444{% endif %};">
+            {{ attempt.score }}%
+        </div>
+        <div style="font-size:1.2rem;font-weight:700;margin-top:4px;">
+            {% if attempt.passed %}
+            <span class="oh-badge oh-badge--success" style="font-size:1rem;padding:8px 20px;">
+                ✓ {% trans "PASSED" %}
+            </span>
+            {% else %}
+            <span class="oh-badge oh-badge--danger" style="font-size:1rem;padding:8px 20px;">
+                ✗ {% trans "FAILED" %}
+            </span>
+            {% endif %}
+        </div>
+        <div class="d-flex justify-content-center gap-4 mt-3 flex-wrap">
+            <div class="text-center">
+                <div style="font-size:1.5rem;font-weight:700;">{{ attempt.correct_answers }}</div>
+                <div class="text-muted small">{% trans "Correct" %}</div>
+            </div>
+            <div class="text-center">
+                <div style="font-size:1.5rem;font-weight:700;">{{ attempt.total_questions }}</div>
+                <div class="text-muted small">{% trans "Total" %}</div>
+            </div>
+            <div class="text-center">
+                <div style="font-size:1.5rem;font-weight:700;">{{ attempt.tab_switch_count }}</div>
+                <div class="text-muted small">{% trans "Tab Switches" %}</div>
+            </div>
+            {% if config %}
+            <div class="text-center">
+                <div style="font-size:1.5rem;font-weight:700;">{{ config.pass_percentage }}%</div>
+                <div class="text-muted small">{% trans "Pass Mark" %}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% if attempt.is_suspicious %}
+        <div class="oh-alert oh-alert--danger mt-3 mb-0">
+            <ion-icon name="warning-outline" class="me-1"></ion-icon>
+            {% trans "Suspicious activity was detected during this attempt." %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Answers review -->
+    <h5 class="fw-bold mb-3">{% trans "Answer Review" %}</h5>
+    {% for answer in answers %}
+    {% with q=answer.question %}
+    <div class="oh-kanban-card mb-3 p-3"
+         style="border-left:4px solid {% if answer.is_correct %}#22c55e{% else %}#ef4444{% endif %};">
+        <div style="font-size:.75rem;color:#6366f1;font-weight:700;text-transform:uppercase;">
+            {% trans "Q" %}{{ forloop.counter }}
+            {% if answer.is_correct %}
+            <span class="text-success ms-2">✓ {% trans "Correct" %}</span>
+            {% else %}
+            <span class="text-danger ms-2">✗ {% trans "Wrong" %}</span>
+            {% endif %}
+        </div>
+        <p class="fw-bold mt-1 mb-2">{{ q.question_text }}</p>
+        {% for opt in q.options.all %}
+        <div class="d-flex align-items-center gap-2 mb-1 p-2 rounded"
+             style="{% if opt.is_correct %}background:#dcfce7;{% elif answer.selected_option == opt %}background:#fee2e2;{% endif %}">
+            <span style="width:22px;height:22px;border-radius:50%;background:#e2e8f0;
+                         display:flex;align-items:center;justify-content:center;
+                         font-size:.7rem;font-weight:700;flex-shrink:0;">
+                {% if forloop.counter == 1 %}A{% elif forloop.counter == 2 %}B{% elif forloop.counter == 3 %}C{% else %}D{% endif %}
+            </span>
+            <span>{{ opt.option_text }}</span>
+            {% if opt.is_correct %}
+            <ion-icon name="checkmark-circle" style="color:#22c55e;margin-left:auto;"></ion-icon>
+            {% elif answer.selected_option == opt %}
+            <ion-icon name="close-circle" style="color:#ef4444;margin-left:auto;"></ion-icon>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% if not answer.selected_option %}
+        <small class="text-muted">{% trans "Not answered" %}</small>
+        {% endif %}
+    </div>
+    {% endwith %}
+    {% endfor %}
+</div>
+{% endblock %}

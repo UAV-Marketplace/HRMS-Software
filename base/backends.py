@@ -75,24 +75,19 @@ class DefaultHorillaMailBackend(EmailBackend):
         if configuration:
             display_email_name = (
                 f"{configuration.display_name} <{configuration.from_email}>"
-            )
-
+                )
             user_id = ""
             if request:
                 if (
                     configuration.use_dynamic_display_name
                     and request.user.is_authenticated
                 ):
-                    display_email_name = f"{request.user.employee_get.get_full_name()} <{request.user.employee_get.get_email()}>"
+                    display_email_name = (f"{request.user.employee_get.get_full_name()} " f"<{configuration.from_email}>")
                 if request.user.is_authenticated:
                     user_id = request.user.pk
-                    reply_to = [
-                        f"{request.user.employee_get.get_full_name()} <{request.user.employee_get.get_email()}>",
-                    ]
+                    reply_to = [request.user.employee_get.get_email()]
                     cache.set(f"reply_to{request.user.pk}", reply_to)
-
             cache.set(f"dynamic_display_name{user_id}", display_email_name)
-
         return configuration
 
     @property

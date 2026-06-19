@@ -1,0 +1,59 @@
+{% load i18n %}
+<div class="oh-modal__dialog-header">
+    <h2 class="oh-modal__dialog-title">
+        {% trans "Assigned Employees" %} — {{ course.title }}
+    </h2>
+    <button type="button" class="oh-modal__close" aria-label="Close">
+        <ion-icon name="close-outline"></ion-icon>
+    </button>
+</div>
+<div class="oh-modal__dialog-body" style="max-height:60vh;overflow-y:auto;">
+    {% if assignments %}
+    <table style="width:100%;border-collapse:collapse;font-size:.9rem;">
+        <thead>
+            <tr style="border-bottom:2px solid #e5e7eb;">
+                <th style="padding:8px 12px;text-align:left;">{% trans "Employee" %}</th>
+                <th style="padding:8px 12px;text-align:center;">{% trans "Status" %}</th>
+                <th style="padding:8px 12px;text-align:center;">{% trans "Action" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for asgn in assignments %}
+            <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:10px 12px;">
+                    <div class="fw-semibold">{{ asgn.employee.get_full_name }}</div>
+                </td>
+                <td style="padding:10px 12px;text-align:center;">
+                    {% if asgn.is_completed %}
+                    <span class="oh-badge oh-badge--success">{% trans "Completed" %}</span>
+                    {% else %}
+                    <span class="oh-badge oh-badge--info">{% trans "Pending" %}</span>
+                    {% endif %}
+                </td>
+                <td style="padding:10px 12px;text-align:center;">
+                    <button class="oh-btn oh-btn--danger-outline oh-btn--sm"
+                            hx-post="{% url 'lms-course-unassign' asgn.id %}"
+                            hx-target="#manageAssignModalTarget"
+                            hx-confirm="{% trans 'Remove this employee from the course? Their test attempts will also be deleted.' %}"
+                            title="{% trans 'Unassign' %}">
+                        <ion-icon name="person-remove-outline" class="me-1"></ion-icon>
+                        {% trans "Remove" %}
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-4 text-muted">
+        <ion-icon name="people-outline" style="font-size:40px;opacity:.3;display:block;margin:0 auto;"></ion-icon>
+        <p class="mt-2 mb-0">{% trans "No employees assigned to this course yet." %}</p>
+    </div>
+    {% endif %}
+</div>
+<div class="oh-modal__dialog-footer">
+    <button type="button" class="oh-btn oh-btn--light"
+            onclick="$('#manageAssignModal').removeClass('oh-modal--show')">
+        {% trans "Close" %}
+    </button>
+</div>

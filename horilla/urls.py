@@ -43,6 +43,9 @@ urlpatterns = [
     ),
     path("i18n/", include("django.conf.urls.i18n")),
     path("health/", health_check),
+    path("hr-meeting/", include("hr_meeting.urls")),
+    path("lms/", include("lms.urls")),
+    path("feedback/", include("feedback.urls")),
 ]
 
 # if settings.DEBUG:

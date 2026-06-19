@@ -1,0 +1,27 @@
+{% load i18n %}
+<div class="oh-modal__dialog-header">
+    <h2 class="oh-modal__dialog-title">{% trans "Assign Course" %} — {{ course.title }}</h2>
+    <button type="button" class="oh-modal__close" aria-label="Close">
+        <ion-icon name="close-outline"></ion-icon>
+    </button>
+</div>
+<div class="oh-modal__dialog-body">
+    <form hx-post="{% url 'lms-course-assign' course.id %}"
+          hx-target="#assignModalTarget"
+          class="oh-profile-section">
+        {% csrf_token %}
+        <div class="oh-input-group">
+            <label class="oh-label">{{ form.employees.label }} <span class="oh-required">*</span></label>
+            {{ form.employees }}
+            <small class="text-muted">{% trans "Already-assigned employees will be skipped." %}</small>
+            {% for e in form.employees.errors %}<span class="oh-input__error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="oh-modal__dialog-footer">
+            <button type="button" class="oh-btn oh-btn--light"
+                    onclick="$('#assignModal').removeClass('oh-modal--show')">
+                {% trans "Cancel" %}
+            </button>
+            <button type="submit" class="oh-btn oh-btn--secondary">{% trans "Assign" %}</button>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,278 @@
+{% load i18n %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{% trans "Assessment" %} — {{ course.title }}</title>
+<link rel="stylesheet" href="{% static 'oh/styles/horilla_style.css' %}" />
+<style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+        margin: 0; font-family: "Inter", sans-serif;
+        background: #f8fafc; color: #1e293b;
+        user-select: none; -webkit-user-select: none;
+    }
+    /* ── Header bar ── */
+    #lms-header {
+        position: sticky; top: 0; z-index: 100;
+        background: #1e293b; color: #fff;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 24px; height: 60px; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    #lms-header .course-name { font-weight: 700; font-size: 1rem; }
+    #lms-timer {
+        display: flex; align-items: center; gap: 8px;
+        background: #334155; border-radius: 8px; padding: 6px 16px;
+        font-size: 1.25rem; font-weight: 700; letter-spacing: 2px;
+        font-variant-numeric: tabular-nums;
+    }
+    #lms-timer.danger { background: #ef4444; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
+    #lms-header .meta { font-size:.8rem; color:#94a3b8; }
+
+    /* ── Warning overlay ── */
+    #tab-warning {
+        display: none; position: fixed; inset: 0; z-index: 9999;
+        background: rgba(0,0,0,.85); color:#fff;
+        flex-direction: column; align-items: center; justify-content: center;
+        text-align: center;
+    }
+    #tab-warning.show { display: flex; }
+    #tab-warning h2 { font-size: 1.8rem; color: #f87171; margin-bottom: 12px; }
+    #tab-warning p { font-size: 1rem; margin-bottom: 24px; max-width: 480px; }
+    #tab-warning .warn-count { font-size:3rem; font-weight:900; color:#fbbf24; }
+
+    /* ── Questions ── */
+    #lms-body { max-width: 860px; margin: 32px auto; padding: 0 16px 80px; }
+    .question-card {
+        background: #fff; border-radius: 12px; padding: 24px;
+        margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08);
+        border-left: 4px solid #6366f1;
+    }
+    .question-card.answered { border-left-color: #22c55e; }
+    .q-number { font-size:.75rem; color:#6366f1; font-weight:700; text-transform:uppercase; margin-bottom:6px; }
+    .q-text { font-size:1rem; font-weight:600; margin-bottom:16px; line-height:1.5; }
+    .option-label {
+        display: flex; align-items: center; gap: 12px;
+        padding: 12px 16px; border-radius: 8px; cursor: pointer;
+        border: 2px solid #e2e8f0; margin-bottom: 8px;
+        transition: border-color .15s, background .15s;
+    }
+    .option-label:hover { border-color: #6366f1; background: #f0f0ff; }
+    .option-label input[type=radio] { accent-color: #6366f1; width:18px; height:18px; flex-shrink:0; }
+    .option-label input[type=radio]:checked + .option-text { font-weight:600; }
+    input[type=radio]:checked ~ .option-label { border-color:#6366f1; background:#ede9fe; }
+    .option-badge {
+        width:28px; height:28px; border-radius:50%; background:#6366f1; color:#fff;
+        font-weight:700; font-size:.8rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+
+    /* ── Submit bar ── */
+    #submit-bar {
+        position: fixed; bottom: 0; left: 0; right: 0;
+        background: #fff; border-top: 1px solid #e2e8f0;
+        padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+        box-shadow: 0 -2px 8px rgba(0,0,0,.06); z-index: 50;
+    }
+    #answered-count { font-size:.9rem; color:#64748b; }
+    .submit-btn {
+        background: #6366f1; color: #fff; border: none; border-radius: 8px;
+        padding: 10px 32px; font-size: 1rem; font-weight: 700; cursor: pointer;
+        transition: background .2s;
+    }
+    .submit-btn:hover { background: #4f46e5; }
+</style>
+</head>
+<body>
+
+<!-- ── Security: block right-click, copy, paste ── -->
+<script>
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('copy',  e => e.preventDefault());
+document.addEventListener('cut',   e => e.preventDefault());
+document.addEventListener('paste', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+    // Block PrintScreen, F12, Ctrl+U/S/P/A, Alt+Tab cannot be blocked but we detect visibility
+    if (e.key === 'PrintScreen') { e.preventDefault(); }
+    if (e.ctrlKey && ['u','s','p','a','c','x'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+    }
+});
+</script>
+
+<!-- Tab-switch warning overlay -->
+<div id="tab-warning">
+    <div class="warn-count" id="warn-count">0</div>
+    <h2>⚠️ {% trans "Tab Switching Detected!" %}</h2>
+    <p>{% trans "Switching tabs or windows during the test is not allowed. This incident has been recorded. Your test may be flagged as suspicious." %}</p>
+    <p id="auto-submit-warn" style="color:#fbbf24;display:none;">
+        {% trans "You have reached 3 violations. The test will be auto-submitted." %}
+    </p>
+    <button onclick="dismissWarning()" id="dismissBtn"
+            style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:1rem;cursor:pointer;">
+        {% trans "I understand — Return to Test" %}
+    </button>
+</div>
+
+<!-- Header -->
+<div id="lms-header">
+    <div>
+        <div class="course-name">{{ course.title }}</div>
+        <div class="meta">{% trans "Attempt" %} #{{ attempt.attempt_number }}
+            {% if config %} · {{ config.duration_minutes }} {% trans "min" %} · {% trans "Pass" %}: {{ config.pass_percentage }}%{% endif %}
+        </div>
+    </div>
+    <div id="lms-timer">
+        <ion-icon name="time-outline"></ion-icon>
+        <span id="timer-display">--:--</span>
+    </div>
+</div>
+
+<!-- Instructions (if any) -->
+{% if config and config.instructions %}
+<div style="max-width:860px;margin:20px auto 0;padding:0 16px;">
+    <div class="question-card" style="border-left-color:#f59e0b;">
+        <div class="q-number">{% trans "Instructions" %}</div>
+        <p style="margin:0;white-space:pre-line;">{{ config.instructions }}</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Questions -->
+<div id="lms-body">
+    <form id="testForm"
+          action="{% url 'lms-submit-test' attempt.id %}"
+          method="POST">
+        {% csrf_token %}
+        {% for q in questions %}
+        <div class="question-card" id="qcard_{{ q.id }}" data-qid="{{ q.id }}">
+            <div class="q-number">{% trans "Q" %}{{ forloop.counter }}</div>
+            <div class="q-text">{{ q.question_text }}</div>
+            {% for opt in q.options.all %}
+            <label class="option-label" for="opt_{{ opt.id }}">
+                <input type="radio" name="q_{{ q.id }}" id="opt_{{ opt.id }}"
+                       value="{{ opt.id }}"
+                       onchange="markAnswered({{ q.id }}, {{ forloop.parentloop.counter }})">
+                <span class="option-badge">{{ forloop.counter|stringformat:"s"|slice:":1" }}{% if forloop.counter == 1 %}A{% elif forloop.counter == 2 %}B{% elif forloop.counter == 3 %}C{% else %}D{% endif %}</span>
+                <span class="option-text">{{ opt.option_text }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </form>
+</div>
+
+<!-- Submit bar -->
+<div id="submit-bar">
+    <span id="answered-count">{% trans "Answered" %}: <strong id="ans-num">0</strong> / {{ questions|length }}</span>
+    <button class="submit-btn" onclick="confirmSubmit()">
+        <ion-icon name="checkmark-circle-outline" style="margin-right:6px;vertical-align:middle;"></ion-icon>
+        {% trans "Submit Test" %}
+    </button>
+</div>
+
+<script type="module" src="https://cdn.jsdelivr.net/npm/ionicons@7/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://cdn.jsdelivr.net/npm/ionicons@7/dist/ionicons/ionicons.js"></script>
+
+<script>
+// ── Timer ────────────────────────────────────────────────────────────────────
+let timeLeft = {{ time_remaining }};
+const timerEl = document.getElementById('timer-display');
+const timerBox = document.getElementById('lms-timer');
+
+function updateTimer() {
+    if (timeLeft <= 0) {
+        timerEl.textContent = '00:00';
+        autoSubmit('timeout');
+        return;
+    }
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    timerEl.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    if (timeLeft <= 60) timerBox.classList.add('danger');
+    timeLeft--;
+}
+updateTimer();
+const timerInterval = setInterval(updateTimer, 1000);
+
+// ── Tab switch detection ──────────────────────────────────────────────────────
+let tabSwitches = 0;
+const CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        tabSwitches++;
+        fetch("{% url 'lms-record-tab-switch' attempt.id %}", {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+        });
+        // When they come back, show warning
+    } else {
+        showWarning();
+    }
+});
+
+// Also detect full-screen exit
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && !document.hidden) {
+        tabSwitches++;
+        showWarning();
+    }
+});
+
+function showWarning() {
+    document.getElementById('warn-count').textContent = tabSwitches;
+    document.getElementById('tab-warning').classList.add('show');
+    if (tabSwitches >= 3) {
+        document.getElementById('auto-submit-warn').style.display = 'block';
+        document.getElementById('dismissBtn').style.display = 'none';
+        setTimeout(() => autoSubmit('violations'), 3000);
+    }
+}
+function dismissWarning() {
+    document.getElementById('tab-warning').classList.remove('show');
+    requestFullscreen();
+}
+
+// ── Fullscreen ───────────────────────────────────────────────────────────────
+function requestFullscreen() {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+}
+// Request fullscreen on load
+window.addEventListener('load', () => { setTimeout(requestFullscreen, 500); });
+
+// ── Answered tracking ─────────────────────────────────────────────────────────
+let answeredSet = new Set();
+function markAnswered(qid, idx) {
+    answeredSet.add(qid);
+    document.getElementById('ans-num').textContent = answeredSet.size;
+    const card = document.getElementById('qcard_' + qid);
+    if (card) card.classList.add('answered');
+}
+
+// ── Submit helpers ─────────────────────────────────────────────────────────────
+function confirmSubmit() {
+    const total = {{ questions|length }};
+    const unanswered = total - answeredSet.size;
+    let msg = '{% trans "Submit the test now?" %}';
+    if (unanswered > 0) {
+        msg = unanswered + ' {% trans "question(s) unanswered. Submit anyway?" %}';
+    }
+    if (confirm(msg)) { submitTest(); }
+}
+function autoSubmit(reason) {
+    clearInterval(timerInterval);
+    document.getElementById('testForm').submit();
+}
+function submitTest() {
+    clearInterval(timerInterval);
+    document.getElementById('testForm').submit();
+}
+</script>
+</body>
+</html>

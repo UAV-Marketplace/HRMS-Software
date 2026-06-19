@@ -1939,4 +1939,21 @@ def delete_auto_payslip(request, auto_id):
         return HorillaRedirect(request)
     except PayslipAutoGenerate.DoesNotExist:
         messages.error(request, _("Payslip auto generate not found."))
+
+
+@login_required
+@permission_required("payroll.view_payslip")
+def salary_calculator(request):
+    """
+    Salary calculator tool for HR/Management to estimate CTC breakdown,
+    deductions, and take-home for an employee.
+    """
+    from base.models import Department
+
+    departments = Department.objects.all().order_by("department")
+    return render(
+        request,
+        "payroll/salary_calculator/salary_calculator.html",
+        {"departments": departments},
+    )
     return HorillaRedirect(request)

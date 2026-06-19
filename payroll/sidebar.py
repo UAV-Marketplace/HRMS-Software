@@ -48,6 +48,11 @@ SUBMENUS = [
         "redirect": reverse("filing-status-view"),
         "accessibility": "payroll.sidebar.federal_tax_accessibility",
     },
+    {
+        "menu": trans("Salary Calculator"),
+        "redirect": reverse("salary-calculator"),
+        "accessibility": "payroll.sidebar.salary_calculator_accessibility",
+    },
 ]
 
 
@@ -69,3 +74,7 @@ def loan_accessibility(request, submenu, user_perms, *args, **kwargs):
 
 def federal_tax_accessibility(request, submenu, user_perms, *args, **kwargs):
     return request.user.has_perm("payroll.view_filingstatus")
+
+
+def salary_calculator_accessibility(request, submenu, user_perms, *args, **kwargs):
+    return request.user.has_perm("payroll.view_payslip")

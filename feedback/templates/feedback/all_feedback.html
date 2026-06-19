@@ -1,0 +1,153 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<section class="oh-wrapper oh-main__topbar" x-data="{searchShow: false}">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <h1 class="oh-main__titlebar-title fw-bold">{% trans "All Feedback" %}</h1>
+        <a class="oh-main__titlebar-search-toggle" role="button" @click="searchShow = !searchShow">
+            <ion-icon name="search-outline" class="oh-main__titlebar-serach-icon"></ion-icon>
+        </a>
+    </div>
+    <div class="oh-main__titlebar oh-main__titlebar--right">
+        <form x-show="searchShow" x-transition method="GET" action="{% url 'feedback-all' %}">
+            <input type="text" name="search" value="{{ search }}"
+                   class="oh-input oh-input--small"
+                   placeholder="{% trans 'Search by employee name…' %}" />
+        </form>
+    </div>
+</section>
+
+<div id="ohMessages"></div>
+
+<div class="oh-wrapper">
+    {% if feedbacks %}
+    <!-- Summary strip -->
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="oh-badge oh-badge--info">
+            {{ feedbacks.paginator.count }} {% trans "total feedbacks" %}
+        </span>
+        {% if search %}
+        <span class="oh-badge oh-badge--warning">
+            {% trans "Filtered by:" %} "{{ search }}"
+        </span>
+        <a href="{% url 'feedback-all' %}" class="oh-badge oh-badge--danger" style="text-decoration:none;">
+            <ion-icon name="close-outline"></ion-icon> {% trans "Clear" %}
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Table -->
+    <div class="oh-kanban-card" style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.88rem;">
+            <thead>
+                <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+                    <th style="padding:12px 16px;text-align:left;font-weight:600;color:#374151;">
+                        {% trans "About Employee" %}
+                    </th>
+                    <th style="padding:12px 16px;text-align:left;font-weight:600;color:#374151;">
+                        {% trans "Given By" %}
+                    </th>
+                    <th style="padding:12px 16px;text-align:center;font-weight:600;color:#374151;">
+                        {% trans "Rating" %}
+                    </th>
+                    <th style="padding:12px 16px;text-align:left;font-weight:600;color:#374151;">
+                        {% trans "Feedback" %}
+                    </th>
+                    <th style="padding:12px 16px;text-align:center;font-weight:600;color:#374151;">
+                        {% trans "Date" %}
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fb in feedbacks %}
+                <tr style="border-bottom:1px solid #f3f4f6;{% cycle '' 'background:#fafafa;' %}">
+                    <td style="padding:12px 16px;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width:34px;height:34px;border-radius:50%;
+                                        background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                                        display:flex;align-items:center;justify-content:center;
+                                        color:#fff;font-weight:700;font-size:.8rem;flex-shrink:0;">
+                                {{ fb.about_employee.employee_first_name|first|upper }}
+                            </div>
+                            <div>
+                                <div class="fw-semibold">{{ fb.about_employee.get_full_name }}</div>
+                                <div class="text-muted" style="font-size:.75rem;">
+                                    {{ fb.about_employee.employee_work_info.department_id|default:"" }}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="padding:12px 16px;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width:34px;height:34px;border-radius:50%;
+                                        background:linear-gradient(135deg,#10b981,#059669);
+                                        display:flex;align-items:center;justify-content:center;
+                                        color:#fff;font-weight:700;font-size:.8rem;flex-shrink:0;">
+                                {{ fb.given_by.employee_first_name|first|upper }}
+                            </div>
+                            <div class="fw-semibold">{{ fb.given_by.get_full_name }}</div>
+                        </div>
+                    </td>
+                    <td style="padding:12px 16px;text-align:center;">
+                        <div style="color:#f59e0b;font-size:1rem;white-space:nowrap;">
+                            {% for i in "12345" %}
+                            {% if forloop.counter <= fb.rating %}★{% else %}☆{% endif %}
+                            {% endfor %}
+                        </div>
+                        <div style="font-size:.75rem;color:#6b7280;">{{ fb.rating }}/5</div>
+                    </td>
+                    <td style="padding:12px 16px;max-width:360px;">
+                        <p style="margin:0;line-height:1.5;color:#374151;">
+                            {{ fb.feedback_text|truncatechars:160 }}
+                        </p>
+                    </td>
+                    <td style="padding:12px 16px;text-align:center;white-space:nowrap;color:#6b7280;font-size:.8rem;">
+                        {{ fb.created_at|date:"d M Y" }}<br>
+                        <span style="font-size:.72rem;">{{ fb.created_at|time:"H:i" }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if feedbacks.paginator.num_pages > 1 %}
+    <div class="oh-pagination mt-3">
+        <span class="oh-pagination__page">
+            {% trans "Page" %} {{ feedbacks.number }} {% trans "of" %} {{ feedbacks.paginator.num_pages }}
+        </span>
+        <nav class="oh-pagination__nav">
+            <ul class="oh-pagination__items">
+                {% if feedbacks.has_previous %}
+                <li class="oh-pagination__item oh-pagination__item--wide">
+                    <a href="?{{ pd }}&page={{ feedbacks.previous_page_number }}" class="oh-pagination__link">
+                        {% trans "Previous" %}
+                    </a>
+                </li>
+                {% endif %}
+                {% if feedbacks.has_next %}
+                <li class="oh-pagination__item oh-pagination__item--wide">
+                    <a href="?{{ pd }}&page={{ feedbacks.next_page_number }}" class="oh-pagination__link">
+                        {% trans "Next" %}
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:55vh;">
+        <ion-icon name="chatbubbles-outline" style="font-size:80px;color:#d1d5db;"></ion-icon>
+        <h5 class="oh-404__subtitle mt-3">
+            {% if search %}{% trans "No feedback found for your search." %}
+            {% else %}{% trans "No feedback has been submitted yet." %}{% endif %}
+        </h5>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

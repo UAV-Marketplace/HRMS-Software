@@ -1,0 +1,425 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load static i18n %}
+
+<main :class="sidebarOpen ? 'oh-main__sidebar-visible' : ''">
+  <div class="oh-wrapper">
+
+    <div class="oh-container oh-container--sharp">
+      <div class="oh-kanban-wrapper__header d-flex align-items-center justify-content-between mb-4">
+        <h2 class="oh-h2" style="font-size:1.4rem;font-weight:600;">{% trans "Salary Calculator" %}</h2>
+        <span class="oh-badge oh-badge--info">{% trans "Maharashtra PT Rules Applied" %}</span>
+      </div>
+
+      <div class="row g-4">
+
+        <!-- ── INPUT CARD ── -->
+        <div class="col-12 col-lg-4">
+          <div class="oh-card p-4">
+            <h5 class="oh-h5 mb-4" style="font-weight:600;border-bottom:1px solid #e5e7eb;padding-bottom:.75rem;">
+              {% trans "Input Details" %}
+            </h5>
+
+            <div class="oh-input-group mb-3">
+              <label class="oh-label" for="fixed_ctc">{% trans "Fixed CTC (Annual) ₹" %}</label>
+              <input type="number" id="fixed_ctc" class="oh-input w-100"
+                     placeholder="e.g. 600000" min="0" step="1000">
+            </div>
+
+            <div class="oh-input-group mb-3">
+              <label class="oh-label" for="gender">{% trans "Gender" %}</label>
+              <select id="gender" class="oh-input w-100">
+                <option value="">-- {% trans "Select" %} --</option>
+                <option value="Male">{% trans "Male" %}</option>
+                <option value="Female">{% trans "Female" %}</option>
+              </select>
+            </div>
+
+            <div class="oh-input-group mb-3">
+              <label class="oh-label" for="month_field">{% trans "Month" %}</label>
+              <select id="month_field" class="oh-input w-100">
+                <option value="">-- {% trans "Select" %} --</option>
+                <option value="Jan">January</option>
+                <option value="Feb">February</option>
+                <option value="Mar">March</option>
+                <option value="Apr">April</option>
+                <option value="May">May</option>
+                <option value="Jun">June</option>
+                <option value="Jul">July</option>
+                <option value="Aug">August</option>
+                <option value="Sep">September</option>
+                <option value="Oct">October</option>
+                <option value="Nov">November</option>
+                <option value="Dec">December</option>
+              </select>
+            </div>
+
+            <div class="oh-input-group mb-4">
+              <label class="oh-label" for="department">{% trans "Department" %}</label>
+              <select id="department" class="oh-input w-100">
+                <option value="">-- {% trans "Select" %} --</option>
+                {% for dept in departments %}
+                  <option value="{{ dept.department }}">{{ dept.department }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <button type="button" id="calc-btn"
+                    class="oh-btn oh-btn--primary w-100"
+                    onclick="calculate()">
+              {% trans "Calculate" %}
+            </button>
+
+            <button type="button" id="reset-btn"
+                    class="oh-btn oh-btn--light-bkg w-100 mt-2"
+                    onclick="resetForm()">
+              {% trans "Reset" %}
+            </button>
+          </div>
+        </div>
+
+        <!-- ── RESULTS ── -->
+        <div class="col-12 col-lg-8" id="results-section" style="display:none;">
+
+          <!-- Earnings -->
+          <div class="oh-card p-4 mb-4">
+            <h5 class="oh-h5 mb-3" style="font-weight:600;color:#16a34a;">
+              {% trans "Earnings Breakdown" %}
+            </h5>
+            <table class="oh-sticky-table w-100">
+              <thead class="oh-sticky-table__thead">
+                <tr class="oh-sticky-table__tr">
+                  <th class="oh-sticky-table__th">{% trans "Component" %}</th>
+                  <th class="oh-sticky-table__th text-end">{% trans "Monthly (₹)" %}</th>
+                  <th class="oh-sticky-table__th text-end">{% trans "Annual (₹)" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td">{% trans "Gross Salary" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-gross"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-gross-annual"></td>
+                </tr>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td" style="padding-left:1.5rem;">{% trans "Basic" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-basic"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-basic-annual"></td>
+                </tr>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td" style="padding-left:1.5rem;">{% trans "HRA" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-hra"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-hra-annual"></td>
+                </tr>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td" style="padding-left:1.5rem;">{% trans "Special Allowance" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-special"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-special-annual"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Employer Contributions -->
+          <div class="oh-card p-4 mb-4">
+            <h5 class="oh-h5 mb-3" style="font-weight:600;color:#2563eb;">
+              {% trans "Employer Contributions (Cost to Company)" %}
+            </h5>
+            <table class="oh-sticky-table w-100">
+              <thead class="oh-sticky-table__thead">
+                <tr class="oh-sticky-table__tr">
+                  <th class="oh-sticky-table__th">{% trans "Component" %}</th>
+                  <th class="oh-sticky-table__th text-end">{% trans "Monthly (₹)" %}</th>
+                  <th class="oh-sticky-table__th text-end">{% trans "Annual (₹)" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td">{% trans "Monthly CTC" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-monthly-ctc"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-fixed-ctc"></td>
+                </tr>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td" style="padding-left:1.5rem;">{% trans "Employer PF (12% of Basic, max ₹1800)" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-employer-pf"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-employer-pf-annual"></td>
+                </tr>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td" style="padding-left:1.5rem;">{% trans "Employer ESIC (3.25% of Gross)" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-employer-esic"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-employer-esic-annual"></td>
+                </tr>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td" style="padding-left:1.5rem;">{% trans "Gratuity (4.81% of Basic)" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-gratuity"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-gratuity-annual"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Employee Deductions -->
+          <div class="oh-card p-4 mb-4">
+            <h5 class="oh-h5 mb-3" style="font-weight:600;color:#dc2626;">
+              {% trans "Employee Deductions" %}
+            </h5>
+            <table class="oh-sticky-table w-100">
+              <thead class="oh-sticky-table__thead">
+                <tr class="oh-sticky-table__tr">
+                  <th class="oh-sticky-table__th">{% trans "Component" %}</th>
+                  <th class="oh-sticky-table__th text-end">{% trans "Monthly (₹)" %}</th>
+                  <th class="oh-sticky-table__th text-end">{% trans "Annual (₹)" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td">{% trans "Employee PF (12% of Basic, max ₹1800)" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-employee-pf"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-employee-pf-annual"></td>
+                </tr>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td">{% trans "Employee ESIC (0.75% of Gross)" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-employee-esic"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-employee-esic-annual"></td>
+                </tr>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td">{% trans "Professional Tax (Maharashtra)" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-pt"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-pt-annual"></td>
+                </tr>
+                <tr class="oh-sticky-table__tr" style="font-weight:600;">
+                  <td class="oh-sticky-table__td">{% trans "Total Deductions" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-total-deductions"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-total-deductions-annual"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Net Take Home -->
+          <div class="oh-card p-4 mb-4" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+              <div>
+                <div class="oh-label mb-1">{% trans "Net Take Home (Monthly)" %}</div>
+                <div id="r-net-monthly" style="font-size:2rem;font-weight:700;color:#15803d;"></div>
+              </div>
+              <div>
+                <div class="oh-label mb-1">{% trans "Net Take Home (Annual)" %}</div>
+                <div id="r-net-annual" style="font-size:1.4rem;font-weight:600;color:#16a34a;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable Pay & Bonus -->
+          <div class="oh-card p-4" id="variable-section" style="display:none;">
+            <h5 class="oh-h5 mb-3" style="font-weight:600;color:#7c3aed;">
+              {% trans "Variable Pay & Bonus" %} <span id="r-dept-name" style="font-size:.85rem;font-weight:400;"></span>
+            </h5>
+            <table class="oh-sticky-table w-100">
+              <thead class="oh-sticky-table__thead">
+                <tr class="oh-sticky-table__tr">
+                  <th class="oh-sticky-table__th">{% trans "Component" %}</th>
+                  <th class="oh-sticky-table__th text-end">{% trans "% of Fixed CTC" %}</th>
+                  <th class="oh-sticky-table__th text-end">{% trans "Amount (₹)" %}</th>
+                  <th class="oh-sticky-table__th text-end">{% trans "Payout Frequency" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td">{% trans "Variable Pay (Annual)" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-variable-pct"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-variable-annual"></td>
+                  <td class="oh-sticky-table__td text-end">{% trans "Quarterly" %}</td>
+                </tr>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td" style="padding-left:1.5rem;">{% trans "Quarterly Payout" %}</td>
+                  <td class="oh-sticky-table__td text-end">—</td>
+                  <td class="oh-sticky-table__td text-end" id="r-variable-quarterly"></td>
+                  <td class="oh-sticky-table__td text-end">{% trans "Every Quarter" %}</td>
+                </tr>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td">{% trans "Bonus (Annual)" %}</td>
+                  <td class="oh-sticky-table__td text-end" id="r-bonus-pct"></td>
+                  <td class="oh-sticky-table__td text-end" id="r-bonus-annual"></td>
+                  <td class="oh-sticky-table__td text-end">{% trans "Half-Yearly" %}</td>
+                </tr>
+                <tr class="oh-sticky-table__tr">
+                  <td class="oh-sticky-table__td" style="padding-left:1.5rem;">{% trans "Half-Yearly Payout" %}</td>
+                  <td class="oh-sticky-table__td text-end">—</td>
+                  <td class="oh-sticky-table__td text-end" id="r-bonus-halfyearly"></td>
+                  <td class="oh-sticky-table__td text-end">{% trans "Every 6 Months" %}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+        <!-- end results col -->
+      </div>
+      <!-- end row -->
+    </div>
+
+  </div>
+</main>
+
+<script>
+const DEPT_VARIABLE = {
+  "Sales":       { variable: 20, bonus: 15 },
+  "Marketing":   { variable: 12, bonus: 15 },
+  "Accounts":    { variable: 10, bonus: 12 },
+  "Management":  { variable: 12, bonus: 15 },
+  "Operations":  { variable: 12, bonus: 15 },
+  "IT":          { variable: 10, bonus: 10 },
+  "HR":          { variable: 10, bonus: 15 },
+  "Logistics":   { variable: 12, bonus: 15 },
+  "Purchase":    { variable: 12, bonus: 15 },
+};
+
+function fmt(n) {
+  return "₹" + Math.round(n).toLocaleString("en-IN");
+}
+
+function set(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function calculate() {
+  var fixedCTC   = parseFloat(document.getElementById("fixed_ctc").value) || 0;
+  var gender     = document.getElementById("gender").value;
+  var monthField = document.getElementById("month_field").value;
+  var department = document.getElementById("department").value;
+
+  if (!fixedCTC || fixedCTC <= 0) {
+    alert("Please enter a valid Fixed CTC.");
+    return;
+  }
+  if (!gender) { alert("Please select Gender."); return; }
+  if (!monthField) { alert("Please select Month."); return; }
+
+  // Monthly CTC
+  var monthlyCTC = Math.round(fixedCTC / 12);
+
+  // Basic = 50% of monthly CTC
+  var basic = Math.round(monthlyCTC * 0.5);
+
+  // HRA = 50% of Basic
+  var hra = Math.round(basic * 0.5);
+
+  // Employer PF = 12% of Basic (max 1800)
+  var employer_pf = basic >= 15000 ? 1800 : Math.round(basic * 0.12);
+
+  // Gratuity = 4.81% of Basic
+  var gratuity = Math.round(basic * 0.0481);
+
+  // Reverse ESIC calculation
+  var temp = monthlyCTC - employer_pf - gratuity;
+  var employer_esic = 0;
+  var employee_esic = 0;
+  var gross;
+  if (temp <= 21000) {
+    gross = temp / 1.0325;
+    employer_esic = Math.round(gross * 0.0325);
+    employee_esic = Math.round(gross * 0.0075);
+    gross = Math.round(gross);
+  } else {
+    gross = Math.round(temp);
+  }
+
+  // Special Allowance (balancing)
+  var special = Math.round(gross - basic - hra);
+
+  // Employee PF (max 1800)
+  var employee_pf = basic >= 15000 ? 1800 : Math.round(basic * 0.12);
+
+  // Professional Tax (Maharashtra)
+  var pt = 0;
+  if (gender === "Male") {
+    if (gross <= 7500) {
+      pt = 0;
+    } else if (gross <= 10000) {
+      pt = 175;
+    } else {
+      pt = (monthField === "Feb") ? 300 : 200;
+    }
+  } else if (gender === "Female") {
+    if (gross <= 25000) {
+      pt = 0;
+    } else {
+      pt = (monthField === "Feb") ? 300 : 200;
+    }
+  }
+
+  // Total Deductions
+  var total_deductions = Math.round(employee_pf + employee_esic + pt);
+
+  // Net Take Home
+  var net_salary = Math.round(gross - total_deductions);
+
+  // ── Earnings ──
+  set("r-gross",          fmt(gross));
+  set("r-gross-annual",   fmt(gross * 12));
+  set("r-basic",          fmt(basic));
+  set("r-basic-annual",   fmt(basic * 12));
+  set("r-hra",            fmt(hra));
+  set("r-hra-annual",     fmt(hra * 12));
+  set("r-special",        fmt(special));
+  set("r-special-annual", fmt(special * 12));
+
+  // ── Employer Contributions ──
+  set("r-monthly-ctc",          fmt(monthlyCTC));
+  set("r-fixed-ctc",            fmt(fixedCTC));
+  set("r-employer-pf",          fmt(employer_pf));
+  set("r-employer-pf-annual",   fmt(employer_pf * 12));
+  set("r-employer-esic",        fmt(employer_esic));
+  set("r-employer-esic-annual", fmt(employer_esic * 12));
+  set("r-gratuity",             fmt(gratuity));
+  set("r-gratuity-annual",      fmt(gratuity * 12));
+
+  // ── Employee Deductions ──
+  set("r-employee-pf",              fmt(employee_pf));
+  set("r-employee-pf-annual",       fmt(employee_pf * 12));
+  set("r-employee-esic",            fmt(employee_esic));
+  set("r-employee-esic-annual",     fmt(employee_esic * 12));
+  set("r-pt",                       fmt(pt));
+  set("r-pt-annual",                fmt(pt * 12));
+  set("r-total-deductions",         fmt(total_deductions));
+  set("r-total-deductions-annual",  fmt(total_deductions * 12));
+
+  // ── Net Take Home ──
+  set("r-net-monthly", fmt(net_salary));
+  set("r-net-annual",  fmt(net_salary * 12));
+
+  // ── Variable Pay & Bonus ──
+  var varSection = document.getElementById("variable-section");
+  if (department && DEPT_VARIABLE[department]) {
+    var rates = DEPT_VARIABLE[department];
+    var variable_annual   = Math.round(fixedCTC * rates.variable / 100);
+    var variable_quarterly = Math.round(variable_annual / 4);
+    var bonus_annual      = Math.round(fixedCTC * rates.bonus / 100);
+    var bonus_halfyearly  = Math.round(bonus_annual / 2);
+
+    set("r-dept-name",         "(" + department + ")");
+    set("r-variable-pct",      rates.variable + "%");
+    set("r-variable-annual",   fmt(variable_annual));
+    set("r-variable-quarterly",fmt(variable_quarterly));
+    set("r-bonus-pct",         rates.bonus + "%");
+    set("r-bonus-annual",      fmt(bonus_annual));
+    set("r-bonus-halfyearly",  fmt(bonus_halfyearly));
+    varSection.style.display = "block";
+  } else {
+    varSection.style.display = "none";
+  }
+
+  document.getElementById("results-section").style.display = "block";
+}
+
+function resetForm() {
+  document.getElementById("fixed_ctc").value = "";
+  document.getElementById("gender").value = "";
+  document.getElementById("month_field").value = "";
+  document.getElementById("department").value = "";
+  document.getElementById("results-section").style.display = "none";
+}
+</script>
+
+{% endblock content %}

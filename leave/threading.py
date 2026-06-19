@@ -6,7 +6,7 @@ from django.core.mail import EmailMessage
 from django.db.models import Q
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
-
+from employee.models import Employee
 from base.backends import ConfiguredEmailBackend
 
 logger = logging.getLogger(__name__)
@@ -54,13 +54,14 @@ class LeaveMailSendThread(Thread):
                 )
                 email.content_subtype = "html"
                 try:
+                    print("Sending mail to", recipient.get_mail())
                     email.send()
-                except:
-                    messages.error(
-                        self.request, f"Mail not sent to {recipient.get_full_name()}"
-                    )
-
+                
+                except Exception as e:
+                    print("MAIL ERROR:", str(e))
+                    logger.exception(e)
     def run(self) -> None:
+        print("Leave email thread started")
         super().run()
         if self.type == "request":
             owner = self.leave_request.employee_id
@@ -69,10 +70,19 @@ class LeaveMailSendThread(Thread):
             content_manager = f"This is to inform you that a leave request has been requested by {owner}. Take the necessary actions for the leave request. Should you have any additional information or updates, please feel free to communicate directly with the {owner}."
             subject_manager = f"Leave request has been requested by {owner}"
 
+            hr = Employee.objects.filter(
+            employee_user_id__email="careers@uavmarketplace.in"
+            ).first()
+
+            recipients = [reporting_manager]
+
+            if hr:
+                recipients.append(hr)
+
             self.send_email(
                 subject_manager,
                 content_manager,
-                [reporting_manager],
+                recipients,
                 self.leave_request.id,
             )
 

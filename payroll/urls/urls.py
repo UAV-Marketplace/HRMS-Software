@@ -197,4 +197,9 @@ urlpatterns = [
         views.activate_auto_payslip_generate,
         name="activate-auto-payslip-generate",
     ),
+    path(
+        "salary-calculator",
+        views.salary_calculator,
+        name="salary-calculator",
+    ),
 ]

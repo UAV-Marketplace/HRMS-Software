@@ -1,0 +1,65 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<section class="oh-wrapper oh-main__topbar" x-data="{searchShow: false}">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <h1 class="oh-main__titlebar-title fw-bold">{% trans "LMS — Courses" %}</h1>
+        <a class="oh-main__titlebar-search-toggle" role="button" @click="searchShow = !searchShow">
+            <ion-icon name="search-outline" class="oh-main__titlebar-serach-icon"></ion-icon>
+        </a>
+    </div>
+    <div class="oh-main__titlebar oh-main__titlebar--right">
+        <form x-show="searchShow" x-transition
+              hx-get="{% url 'lms-course-filter' %}"
+              hx-target="#courseList"
+              hx-trigger="keyup changed delay:400ms from:#lmsCourseSearch">
+            <input type="text" id="lmsCourseSearch" name="search"
+                   class="oh-input oh-input--small"
+                   placeholder="{% trans 'Search courses…' %}" />
+        </form>
+        {% if request.user.is_superuser or perms.lms.add_course %}
+        <button class="oh-btn oh-btn--secondary oh-btn--shadow ms-2"
+                data-toggle="oh-modal-toggle" data-target="#objectCreateModal"
+                hx-get="{% url 'lms-course-create' %}" hx-target="#objectCreateModalTarget">
+            <ion-icon name="add-outline" class="me-1"></ion-icon>{% trans "Add Course" %}
+        </button>
+        {% endif %}
+    </div>
+</section>
+
+<div id="ohMessages"></div>
+
+<div class="oh-wrapper">
+    <div id="courseList">
+        {% include "lms/course_list.html" %}
+    </div>
+</div>
+
+<!-- Create / Edit modal -->
+<div class="oh-modal" id="objectCreateModal" role="dialog" aria-hidden="true">
+    <div class="oh-modal__dialog">
+        <div id="objectCreateModalTarget"></div>
+    </div>
+</div>
+<!-- Assign modal -->
+<div class="oh-modal" id="assignModal" role="dialog" aria-hidden="true">
+    <div class="oh-modal__dialog">
+        <div id="assignModalTarget"></div>
+    </div>
+</div>
+<!-- Test config modal -->
+<div class="oh-modal" id="testConfigModal" role="dialog" aria-hidden="true">
+    <div class="oh-modal__dialog">
+        <div id="testConfigModalTarget"></div>
+    </div>
+</div>
+<!-- Manage assignments modal -->
+<div class="oh-modal" id="manageAssignModal" role="dialog" aria-hidden="true">
+    <div class="oh-modal__dialog">
+        <div id="manageAssignModalTarget"></div>
+    </div>
+</div>
+
+{% endblock %}

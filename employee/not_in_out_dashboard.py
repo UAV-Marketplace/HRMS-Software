@@ -310,6 +310,11 @@ def send_mail_to_employee(request):
                 messages.success(request, f"Mail sent to {employee.get_full_name()}")
             else:
                 messages.info(request, f"Email not set for {employee.get_full_name()}")
+        # except Exception as e:
+        #     messages.error(request, "Something went wrong")
         except Exception as e:
-            messages.error(request, "Something went wrong")
+            print("MAIL ERROR:", str(e))
+            import traceback
+            traceback.print_exc()
+            messages.error(request, f"MAIL ERROR: {e}")
     return HorillaRedirect(request)

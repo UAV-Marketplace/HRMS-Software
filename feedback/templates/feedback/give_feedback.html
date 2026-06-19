@@ -1,0 +1,154 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<section class="oh-wrapper oh-main__topbar">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <h1 class="oh-main__titlebar-title fw-bold">{% trans "Give Feedback" %}</h1>
+    </div>
+</section>
+
+<div id="ohMessages"></div>
+
+<div class="oh-wrapper" style="max-width:720px;margin:0 auto;">
+    <div class="oh-kanban-card p-4" style="border-top:3px solid #6366f1;">
+        <div class="mb-4">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <ion-icon name="shield-checkmark-outline" style="color:#6366f1;font-size:1.3rem;"></ion-icon>
+                <h5 class="fw-bold mb-0">{% trans "Anonymous Feedback" %}</h5>
+            </div>
+            <p class="text-muted small mb-0">
+                {% trans "Your identity will never be revealed to the employee. Submit honest and constructive feedback." %}
+            </p>
+        </div>
+
+        <form method="POST" id="feedbackForm">
+            {% csrf_token %}
+
+            <!-- Employee selector -->
+            <div class="oh-input-group mb-4">
+                <label class="oh-label">
+                    {{ form.about_employee.label }}
+                    <span class="oh-required">*</span>
+                </label>
+                {{ form.about_employee }}
+                {% for e in form.about_employee.errors %}
+                <span class="oh-input__error">{{ e }}</span>
+                {% endfor %}
+            </div>
+
+            <!-- Star rating -->
+            <div class="oh-input-group mb-4">
+                <label class="oh-label">
+                    {% trans "Rating" %}
+                    <span class="oh-required">*</span>
+                </label>
+                <div class="d-flex align-items-center gap-1 mt-1" id="starContainer">
+                    {% for i in "12345" %}
+                    <span id="star{{ forloop.counter }}"
+                          onclick="setRating({{ forloop.counter }})"
+                          onmouseover="hoverRating({{ forloop.counter }})"
+                          onmouseout="resetHover()"
+                          style="font-size:2.4rem;color:#d1d5db;cursor:pointer;
+                                 transition:color .12s,transform .1s;line-height:1;
+                                 user-select:none;">&#9734;</span>
+                    {% endfor %}
+                    <span id="ratingLabel" class="ms-3 fw-semibold small" style="color:#374151;"></span>
+                </div>
+                {{ form.rating }}
+                <span id="ratingError" class="oh-input__error" style="display:none;">
+                    {% trans "Please select a rating." %}
+                </span>
+                {% for e in form.rating.errors %}
+                <span class="oh-input__error">{{ e }}</span>
+                {% endfor %}
+            </div>
+
+            <!-- Feedback text -->
+            <div class="oh-input-group mb-4">
+                <label class="oh-label">
+                    {{ form.feedback_text.label }}
+                    <span class="oh-required">*</span>
+                </label>
+                {{ form.feedback_text }}
+                {% for e in form.feedback_text.errors %}
+                <span class="oh-input__error">{{ e }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex gap-2 justify-content-end">
+                <button type="button" class="oh-btn oh-btn--light"
+                        onclick="document.getElementById('feedbackForm').reset(); clearRating();">
+                    {% trans "Clear" %}
+                </button>
+                <button type="submit" class="oh-btn oh-btn--secondary">
+                    <ion-icon name="send-outline" class="me-1"></ion-icon>
+                    {% trans "Submit Feedback" %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const ratingLabels = {
+    1: "{% trans 'Poor' %}",
+    2: "{% trans 'Below Average' %}",
+    3: "{% trans 'Average' %}",
+    4: "{% trans 'Good' %}",
+    5: "{% trans 'Excellent' %}"
+};
+let currentRating = {{ form.rating.value|default:0 }};
+
+function setRating(val) {
+    currentRating = val;
+    document.getElementById('id_rating').value = val;
+    document.getElementById('ratingError').style.display = 'none';
+    renderStars(val);
+    document.getElementById('ratingLabel').textContent = ratingLabels[val] || '';
+}
+
+function hoverRating(val) {
+    renderStars(val, true);
+}
+
+function resetHover() {
+    renderStars(currentRating);
+}
+
+function renderStars(val, hover) {
+    for (let i = 1; i <= 5; i++) {
+        const star = document.getElementById('star' + i);
+        if (i <= val) {
+            star.innerHTML = '&#9733;';
+            star.style.color = hover ? '#f59e0baa' : '#f59e0b';
+            star.style.transform = hover ? 'scale(1.15)' : 'scale(1.1)';
+        } else {
+            star.innerHTML = '&#9734;';
+            star.style.color = '#d1d5db';
+            star.style.transform = 'scale(1)';
+        }
+    }
+}
+
+function clearRating() {
+    currentRating = 0;
+    document.getElementById('id_rating').value = '';
+    renderStars(0);
+    document.getElementById('ratingLabel').textContent = '';
+}
+
+if (currentRating) {
+    setRating(currentRating);
+}
+
+document.getElementById('feedbackForm').addEventListener('submit', function(e) {
+    if (!document.getElementById('id_rating').value) {
+        e.preventDefault();
+        document.getElementById('ratingError').style.display = 'block';
+        document.getElementById('starContainer').scrollIntoView({behavior:'smooth', block:'center'});
+    }
+});
+</script>
+{% endblock %}
