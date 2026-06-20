@@ -1,0 +1,59 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<section class="oh-wrapper oh-main__topbar" x-data="{searchShow:false}">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <h1 class="oh-main__titlebar-title fw-bold">{% trans "Performance Improvement Plans" %}</h1>
+        <a class="oh-main__titlebar-search-toggle" role="button" @click="searchShow = !searchShow">
+            <ion-icon name="search-outline" class="oh-main__titlebar-serach-icon"></ion-icon>
+        </a>
+    </div>
+    <div class="oh-main__titlebar oh-main__titlebar--right">
+        <form x-show="searchShow" x-transition class="d-flex gap-2 align-items-center"
+              hx-get="{% url 'pip-filter' %}"
+              hx-target="#pipTable"
+              hx-trigger="keyup changed delay:400ms from:#pipSearch, change from:#statusFilter">
+            <select id="statusFilter" name="status" class="oh-input oh-input--small">
+                <option value="">{% trans "All Statuses" %}</option>
+                {% for val, label in status_choices %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" id="pipSearch" name="search"
+                   class="oh-input oh-input--small"
+                   placeholder="{% trans 'Search employee…' %}" />
+        </form>
+        {% if request.user.is_superuser or perms.pip_management.add_performanceimprovementplan %}
+        <button class="oh-btn oh-btn--secondary oh-btn--shadow ms-2"
+                data-toggle="oh-modal-toggle" data-target="#pipCreateModal"
+                hx-get="{% url 'pip-create' %}" hx-target="#pipCreateModalTarget">
+            <ion-icon name="add-outline" class="me-1"></ion-icon>{% trans "New PIP" %}
+        </button>
+        {% endif %}
+    </div>
+</section>
+
+<div id="ohMessages"></div>
+
+<div class="oh-wrapper">
+    <div id="pipTable">
+        {% include "pip_management/pip_table.html" %}
+    </div>
+</div>
+
+<!-- Create modal -->
+<div class="oh-modal" id="pipCreateModal" role="dialog" aria-hidden="true">
+    <div class="oh-modal__dialog" style="max-width:780px;">
+        <div id="pipCreateModalTarget"></div>
+    </div>
+</div>
+<!-- Edit modal -->
+<div class="oh-modal" id="pipEditModal" role="dialog" aria-hidden="true">
+    <div class="oh-modal__dialog" style="max-width:780px;">
+        <div id="pipEditModalTarget"></div>
+    </div>
+</div>
+
+{% endblock %}

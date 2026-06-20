@@ -46,6 +46,8 @@ urlpatterns = [
     path("hr-meeting/", include("hr_meeting.urls")),
     path("lms/", include("lms.urls")),
     path("feedback/", include("feedback.urls")),
+    path("pip/", include("pip_management.urls")),
+    path("chat/", include("chat.urls")),
 ]
 
 # if settings.DEBUG:

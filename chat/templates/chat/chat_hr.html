@@ -1,0 +1,192 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<style>
+/* ── Base chat layout ── */
+.chat-outer {
+    display: flex;
+    height: calc(100vh - 140px);
+    height: calc(100dvh - 140px);
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.chat-list-panel {
+    width: 300px;
+    flex-shrink: 0;
+    border-right: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    transition: transform .25s ease;
+}
+.chat-right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.conv-list-item:hover { background: #f9fafb; }
+.conv-list-item.conv-active { background: #eff6ff; border-right: 3px solid #6366f1; }
+
+/* ── Mobile overrides ── */
+@media (max-width: 768px) {
+    .chat-outer {
+        height: calc(100vh - 110px);
+        height: calc(100dvh - 110px);
+        border-radius: 10px;
+        position: relative;
+    }
+    .chat-page-wrapper {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+        padding-top: 0 !important;
+    }
+    .chat-list-panel {
+        width: 100%;
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        border-right: none;
+    }
+    .chat-list-panel.mobile-hidden {
+        display: none;
+    }
+    .chat-right-panel {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        display: none;
+        background: #fff;
+    }
+    .chat-right-panel.mobile-open {
+        display: flex;
+    }
+    .mobile-back-btn {
+        display: flex !important;
+    }
+}
+@media (min-width: 769px) {
+    .mobile-back-btn { display: none !important; }
+}
+@media (max-width: 480px) {
+    .chat-outer {
+        height: calc(100vh - 100px);
+        height: calc(100dvh - 100px);
+        border-radius: 8px;
+    }
+}
+</style>
+
+<section class="oh-wrapper oh-main__topbar">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <h1 class="oh-main__titlebar-title fw-bold">{% trans "HR Chat" %}</h1>
+    </div>
+    <div class="oh-main__titlebar oh-main__titlebar--right">
+        <span class="oh-badge" style="background:#f0fdf4;color:#16a34a;font-size:.78rem;">
+            <ion-icon name="ellipse" style="font-size:.5rem;color:#22c55e;margin-right:4px;"></ion-icon>
+            {% trans "Live" %}
+        </span>
+    </div>
+</section>
+
+<div id="ohMessages"></div>
+
+<div class="oh-wrapper chat-page-wrapper" style="padding-top:0;">
+    <div class="chat-outer">
+
+        <!-- LEFT: Conversation list -->
+        <div id="convListPanel" class="chat-list-panel">
+            <div style="padding:14px 16px;border-bottom:1px solid #f3f4f6;flex-shrink:0;">
+                <div style="font-weight:700;color:#111827;font-size:.92rem;">
+                    {% trans "Conversations" %}
+                </div>
+                <div style="font-size:.73rem;color:#9ca3af;margin-top:2px;">
+                    {{ conversations|length }} {% trans "employees" %}
+                </div>
+            </div>
+            <div id="convList"
+                 style="flex:1;overflow-y:auto;"
+                 hx-get="{% url 'chat-conv-list' %}"
+                 hx-trigger="every 5s"
+                 hx-swap="innerHTML">
+                {% include "chat/partials/conv_list.html" with conversations=conversations %}
+            </div>
+        </div>
+
+        <!-- RIGHT: Chat panel -->
+        <div id="rightPanel" class="chat-right-panel">
+            <div style="flex:1;display:flex;flex-direction:column;
+                        align-items:center;justify-content:center;
+                        color:#9ca3af;text-align:center;padding:20px;">
+                <div style="width:64px;height:64px;border-radius:50%;background:#f3f4f6;
+                            display:flex;align-items:center;justify-content:center;margin-bottom:12px;">
+                    <ion-icon name="chatbubbles-outline" style="font-size:1.8rem;color:#d1d5db;"></ion-icon>
+                </div>
+                <div style="font-size:.92rem;font-weight:600;color:#374151;margin-bottom:6px;">
+                    {% trans "Select a conversation" %}
+                </div>
+                <div style="font-size:.8rem;max-width:240px;line-height:1.5;">
+                    {% trans "Tap an employee from the list to view their messages." %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+window.activeChatConvId = null;
+
+function loadConversation(convId) {
+    window.activeChatConvId = convId;
+
+    // Highlight active item in list
+    document.querySelectorAll('.conv-list-item').forEach(el => el.classList.remove('conv-active'));
+    const item = document.getElementById('conv-item-' + convId);
+    if (item) item.classList.add('conv-active');
+
+    // Load right panel content
+    htmx.ajax('GET', '/chat/' + convId + '/panel/', {
+        target: '#rightPanel',
+        swap: 'innerHTML'
+    });
+
+    // On mobile: hide list, show right panel
+    if (window.innerWidth <= 768) {
+        document.getElementById('convListPanel').classList.add('mobile-hidden');
+        document.getElementById('rightPanel').classList.add('mobile-open');
+    }
+}
+
+// Called by the back button inside right_panel.html
+function mobileBackToList() {
+    document.getElementById('rightPanel').classList.remove('mobile-open');
+    document.getElementById('convListPanel').classList.remove('mobile-hidden');
+    window.activeChatConvId = null;
+}
+
+function scrollChatToBottom() {
+    const el = document.getElementById('chatMessages');
+    if (el) el.scrollTop = el.scrollHeight;
+}
+
+document.addEventListener('htmx:afterSwap', function(e) {
+    if (!e.detail.target) return;
+    if (e.detail.target.id === 'convList') {
+        if (window.activeChatConvId) {
+            document.querySelectorAll('.conv-list-item').forEach(el => el.classList.remove('conv-active'));
+            const item = document.getElementById('conv-item-' + window.activeChatConvId);
+            if (item) item.classList.add('conv-active');
+        }
+    }
+    if (e.detail.target.id === 'chatMessages' || e.detail.target.id === 'rightPanel') {
+        scrollChatToBottom();
+    }
+});
+</script>
+{% endblock %}

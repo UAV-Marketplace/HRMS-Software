@@ -49,12 +49,28 @@
     <!-- Bootstrap JS -->
     {% block styles %}
     {% endblock styles %}
+    <style>
+    #globalPageLoader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 3px;
+        background: linear-gradient(to right, #6366f1, #818cf8, #a78bfa);
+        box-shadow: 0 0 8px rgba(99,102,241,.6);
+        z-index: 999999;
+        opacity: 0;
+        pointer-events: none;
+        transition: none;
+    }
+    </style>
 </head>
 
 
 <div hidden id="statiUrl" data-url='{% static "" %}'></div>
 
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <div id="globalPageLoader"></div>
     <span class="logged-in" data-user-id="{{request.user.id}}"></span>
     <div id="reloadMessages">
         {% include "generic/messages.html" %}
@@ -262,6 +278,59 @@
             window.history.replaceState({}, document.title, urlWithoutQuery);
         }
     </script>
+    <script>
+    (function () {
+        var bar = document.getElementById('globalPageLoader');
+        var hideTimer = null;
+
+        function start() {
+            if (hideTimer) clearTimeout(hideTimer);
+            bar.style.transition = 'none';
+            bar.style.width = '0%';
+            bar.style.opacity = '1';
+            bar.getBoundingClientRect(); // force reflow
+            bar.style.transition = 'width 8s cubic-bezier(0.08, 0.04, 0, 1)';
+            bar.style.width = '85%';
+        }
+
+        function done() {
+            if (hideTimer) clearTimeout(hideTimer);
+            bar.style.transition = 'width 0.15s ease';
+            bar.style.width = '100%';
+            hideTimer = setTimeout(function () {
+                bar.style.transition = 'opacity 0.3s ease';
+                bar.style.opacity = '0';
+                setTimeout(function () {
+                    bar.style.transition = 'none';
+                    bar.style.width = '0%';
+                }, 350);
+            }, 150);
+        }
+
+        // Full page navigation
+        window.addEventListener('beforeunload', start);
+
+        // HTMX partial requests — ignore anything that fires on page init
+        // (notifications, attendance widget, etc. all auto-load within ~500ms)
+        var htmxReady = false;
+        setTimeout(function () { htmxReady = true; }, 500);
+
+        document.addEventListener('htmx:beforeRequest', function (e) {
+            if (!htmxReady) return; // page still initialising — skip auto-triggers
+            var trigger = e.detail.elt ? (e.detail.elt.getAttribute('hx-trigger') || '') : '';
+            // Skip polling, load, revealed and intersect auto-triggers
+            if (trigger.indexOf('every ')     !== -1) return;
+            if (trigger.indexOf('load')       !== -1) return;
+            if (trigger.indexOf('revealed')   !== -1) return;
+            if (trigger.indexOf('intersect')  !== -1) return;
+            start();
+        });
+        document.addEventListener('htmx:afterRequest',   done);
+        document.addEventListener('htmx:requestError',   done);
+        document.addEventListener('htmx:responseError',  done);
+    })();
+    </script>
+
     {% if enabled_timerunner %}
         <script>
             // time-runner
@@ -320,6 +389,185 @@
                 }
             }
         </script>
+    {% endif %}
+
+    {% if request.user.is_authenticated %}
+    <!-- ── Floating Chat Widget ──────────────────────────────────────────────── -->
+    <style>
+    #chatFloatBtn {
+        position: fixed;
+        bottom: 103px;
+        right: 10px;
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        border: none;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(99,102,241,.45);
+        z-index: 99998;
+        transition: transform .15s ease, box-shadow .15s ease;
+        padding: 0;
+    }
+    #chatFloatBtn:hover {
+        transform: scale(1.08);
+        box-shadow: 0 6px 22px rgba(99,102,241,.55);
+    }
+    #chatFloatBadge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        background: #ef4444;
+        color: #fff;
+        font-size: .6rem;
+        font-weight: 700;
+        min-width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 4px;
+        border: 2px solid #fff;
+        line-height: 1;
+    }
+    #chatFloatBadge:empty { display: none; }
+    #chatFloatWidget {
+        position: fixed;
+        bottom: 163px;
+        right: 10px;
+        width: 340px;
+        height: 460px;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.08);
+        z-index: 99997;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        visibility: hidden;
+        opacity: 0;
+        transform: translateY(16px);
+        pointer-events: none;
+        transition: transform .2s ease, opacity .2s ease, visibility 0s linear .2s;
+    }
+    #chatFloatWidget.is-open {
+        visibility: visible;
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+        transition: transform .2s ease, opacity .2s ease, visibility 0s linear 0s;
+    }
+    @media (max-width: 640px) {
+        #chatFloatBtn  { bottom: 103px; right: 10px; width: 48px; height: 48px; }
+        #chatFloatWidget {
+            bottom: 163px;
+            right: 8px;
+            left: 8px;
+            width: auto;
+            height: calc(100dvh - 220px);
+            border-radius: 12px;
+        }
+    }
+    </style>
+
+    <!-- Floating button -->
+    <button id="chatFloatBtn" onclick="toggleChatWidget()" title="Chat with HR">
+        <ion-icon name="chatbubbles-outline" style="font-size:1.4rem;"></ion-icon>
+        <span id="chatFloatBadge"
+              hx-get="{% url 'chat-unread-count' %}"
+              hx-trigger="load, every 30s"
+              hx-swap="innerHTML"></span>
+    </button>
+
+    <!-- Widget popup -->
+    <div id="chatFloatWidget" aria-hidden="true">
+        <!-- Header -->
+        <div style="padding:12px 14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                    display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:30px;height:30px;border-radius:50%;
+                            background:rgba(255,255,255,.2);
+                            display:flex;align-items:center;justify-content:center;">
+                    <ion-icon name="chatbubbles-outline" style="font-size:1rem;color:#fff;"></ion-icon>
+                </div>
+                <div>
+                    <div style="font-weight:700;color:#fff;font-size:.9rem;line-height:1.2;">HR Chat</div>
+                    <div style="font-size:.68rem;color:rgba(255,255,255,.75);">Support &amp; Assistance</div>
+                </div>
+            </div>
+            <button onclick="toggleChatWidget()"
+                    style="width:28px;height:28px;border-radius:50%;border:none;
+                           background:rgba(255,255,255,.2);color:#fff;cursor:pointer;
+                           display:flex;align-items:center;justify-content:center;
+                           transition:background .15s;padding:0;"
+                    onmouseover="this.style.background='rgba(255,255,255,.3)'"
+                    onmouseout="this.style.background='rgba(255,255,255,.2)'">
+                <ion-icon name="close-outline" style="font-size:1.1rem;"></ion-icon>
+            </button>
+        </div>
+        <!-- Body (content loaded lazily) -->
+        <div id="chatWidgetBody"
+             style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        var widgetLoaded = false;
+
+        window.toggleChatWidget = function () {
+            var w = document.getElementById('chatFloatWidget');
+            var open = w.classList.contains('is-open');
+            if (open) {
+                w.classList.remove('is-open');
+                w.setAttribute('aria-hidden', 'true');
+            } else {
+                w.classList.add('is-open');
+                w.setAttribute('aria-hidden', 'false');
+                if (!widgetLoaded) {
+                    widgetLoaded = true;
+                    htmx.ajax('GET', '{% url "chat-widget" %}', {
+                        target: '#chatWidgetBody', swap: 'innerHTML'
+                    });
+                }
+                setTimeout(widgetScrollBottom, 250);
+            }
+        };
+
+        window.loadWidgetConv = function (convId) {
+            htmx.ajax('GET', '/chat/widget/' + convId + '/', {
+                target: '#chatWidgetBody', swap: 'innerHTML'
+            });
+            setTimeout(widgetScrollBottom, 250);
+        };
+
+        window.loadWidgetHome = function () {
+            widgetLoaded = false;
+            htmx.ajax('GET', '{% url "chat-widget" %}', {
+                target: '#chatWidgetBody', swap: 'innerHTML'
+            });
+        };
+
+        window.widgetScrollBottom = function () {
+            var el = document.getElementById('widgetMessages');
+            if (el) el.scrollTop = el.scrollHeight;
+        };
+
+        document.addEventListener('htmx:afterSwap', function (e) {
+            if (!e.detail.target) return;
+            var id = e.detail.target.id;
+            if (id === 'widgetMessages' || id === 'chatWidgetBody') {
+                setTimeout(widgetScrollBottom, 30);
+            }
+        });
+    })();
+    </script>
+    <!-- ── End Floating Chat Widget ──────────────────────────────────────────── -->
     {% endif %}
 </body>
 

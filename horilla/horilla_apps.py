@@ -23,6 +23,8 @@ INSTALLED_APPS.append("project")
 INSTALLED_APPS.append("hr_meeting")
 INSTALLED_APPS.append("lms")
 INSTALLED_APPS.append("feedback")
+INSTALLED_APPS.append("pip_management")
+INSTALLED_APPS.append("chat")
 if settings.env("AWS_ACCESS_KEY_ID", default=None) and "storages" not in INSTALLED_APPS:
     INSTALLED_APPS.append("storages")
 
@@ -55,6 +57,7 @@ SIDEBARS = [
     "leave",
     "payroll",
     "pms",
+    "chat",
     "offboarding",
     "asset",
     "helpdesk",
@@ -62,6 +65,7 @@ SIDEBARS = [
     "hr_meeting",
     "lms",
     "feedback",
+    "pip_management",
 ]
 
 WHITE_LABELLING = False

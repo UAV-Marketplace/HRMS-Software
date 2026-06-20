@@ -1,0 +1,314 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n %}
+{% load static %}
+
+<section class="oh-wrapper oh-main__topbar">
+    <div class="oh-main__titlebar oh-main__titlebar--left">
+        <a href="{% url 'pip-list' %}" class="oh-btn oh-btn--light-bkg oh-btn--sm me-2">
+            <ion-icon name="arrow-back-outline"></ion-icon>
+        </a>
+        <h1 class="oh-main__titlebar-title fw-bold">{% trans "PIP Detail" %}</h1>
+    </div>
+    <div class="oh-main__titlebar oh-main__titlebar--right">
+        {% if request.user.is_superuser or perms.pip_management.change_performanceimprovementplan %}
+        <button class="oh-btn oh-btn--secondary oh-btn--shadow"
+                data-toggle="oh-modal-toggle" data-target="#pipEditModal"
+                hx-get="{% url 'pip-update' pip.id %}" hx-target="#pipEditModalTarget">
+            <ion-icon name="create-outline" class="me-1"></ion-icon>{% trans "Edit PIP" %}
+        </button>
+        {% endif %}
+    </div>
+</section>
+
+<div id="ohMessages"></div>
+
+<div class="oh-wrapper">
+    <div class="row g-4">
+
+        <!-- LEFT: PIP Info + Goals -->
+        <div class="col-lg-7">
+
+            <!-- PIP Summary Card -->
+            <div class="oh-kanban-card mb-4">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div style="width:52px;height:52px;border-radius:50%;
+                                background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                                display:flex;align-items:center;justify-content:center;
+                                color:#fff;font-weight:700;font-size:1.2rem;flex-shrink:0;">
+                        {{ pip.employee.employee_first_name|first|upper }}
+                    </div>
+                    <div>
+                        <h4 class="mb-0 fw-bold">{{ pip.employee.get_full_name }}</h4>
+                        <div class="text-muted" style="font-size:.82rem;">
+                            {{ pip.employee.employee_work_info.department_id|default:"" }}
+                            &nbsp;|&nbsp;
+                            {{ pip.employee.employee_work_info.job_position_id|default:"" }}
+                        </div>
+                    </div>
+                    <div class="ms-auto">
+                        <span style="padding:5px 14px;border-radius:14px;font-weight:600;
+                                     font-size:.8rem;color:#fff;background:{{ pip.status_color }};">
+                            {{ pip.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3" style="font-size:.85rem;">
+                    <div class="col-6">
+                        <div class="text-muted">{% trans "Start Date" %}</div>
+                        <div class="fw-semibold">{{ pip.start_date|date:"d M Y" }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">{% trans "End Date" %}</div>
+                        <div class="fw-semibold">{{ pip.end_date|date:"d M Y" }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">{% trans "Duration" %}</div>
+                        <div class="fw-semibold">{{ pip.duration_days }} {% trans "days" %}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">{% trans "Goals Progress" %}</div>
+                        <div class="fw-semibold">{{ pip.achieved_goals_count }} / {{ pip.goals_count }} {% trans "achieved" %}</div>
+                    </div>
+                </div>
+
+                <hr style="border-color:#f3f4f6;">
+
+                <div class="mb-3">
+                    <div class="fw-semibold mb-1" style="font-size:.85rem;color:#374151;">
+                        {% trans "Reason / Performance Issues Observed" %}
+                    </div>
+                    <p style="font-size:.88rem;color:#6b7280;line-height:1.6;white-space:pre-line;">{{ pip.reason }}</p>
+                </div>
+
+                <div class="mb-3">
+                    <div class="fw-semibold mb-1" style="font-size:.85rem;color:#374151;">
+                        {% trans "Objectives / Expected Improvements" %}
+                    </div>
+                    <p style="font-size:.88rem;color:#6b7280;line-height:1.6;white-space:pre-line;">{{ pip.objectives }}</p>
+                </div>
+
+                {% if pip.support_provided %}
+                <div class="mb-3">
+                    <div class="fw-semibold mb-1" style="font-size:.85rem;color:#374151;">
+                        {% trans "Support to be Provided" %}
+                    </div>
+                    <p style="font-size:.88rem;color:#6b7280;line-height:1.6;white-space:pre-line;">{{ pip.support_provided }}</p>
+                </div>
+                {% endif %}
+
+                {% if pip.outcome_notes %}
+                <div class="mb-0">
+                    <div class="fw-semibold mb-1" style="font-size:.85rem;color:#374151;">
+                        {% trans "Outcome / Closing Notes" %}
+                    </div>
+                    <p style="font-size:.88rem;color:#6b7280;line-height:1.6;white-space:pre-line;">{{ pip.outcome_notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Goals Section -->
+            <div class="oh-kanban-card mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="fw-bold mb-0">
+                        <ion-icon name="checkmark-circle-outline" class="me-1" style="color:#6366f1;"></ion-icon>
+                        {% trans "Goals" %}
+                        <span class="text-muted fw-normal" style="font-size:.85rem;">
+                            ({{ pip.achieved_goals_count }}/{{ pip.goals_count }})
+                        </span>
+                    </h5>
+                    {% if request.user.is_superuser or perms.pip_management.change_performanceimprovementplan %}
+                    <button class="oh-btn oh-btn--light-bkg oh-btn--sm"
+                            data-toggle="oh-modal-toggle" data-target="#addGoalModal">
+                        <ion-icon name="add-outline"></ion-icon> {% trans "Add Goal" %}
+                    </button>
+                    {% endif %}
+                </div>
+
+                {% if goals %}
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    {% for goal in goals %}
+                    <div style="border:1px solid {% if goal.is_achieved %}#bbf7d0{% else %}#e5e7eb{% endif %};
+                                border-radius:10px;padding:12px 16px;
+                                background:{% if goal.is_achieved %}#f0fdf4{% else %}#fff{% endif %};">
+                        <div class="d-flex align-items-start gap-2">
+                            {% if request.user.is_superuser or perms.pip_management.change_performanceimprovementplan %}
+                            <a href="{% url 'pip-goal-toggle' goal.id %}"
+                               title="{% if goal.is_achieved %}{% trans 'Mark not achieved' %}{% else %}{% trans 'Mark achieved' %}{% endif %}"
+                               style="margin-top:2px;text-decoration:none;">
+                                <ion-icon name="{% if goal.is_achieved %}checkmark-circle{% else %}ellipse-outline{% endif %}"
+                                          style="font-size:1.3rem;color:{% if goal.is_achieved %}#22c55e{% else %}#9ca3af{% endif %};flex-shrink:0;"></ion-icon>
+                            </a>
+                            {% else %}
+                            <ion-icon name="{% if goal.is_achieved %}checkmark-circle{% else %}ellipse-outline{% endif %}"
+                                      style="font-size:1.3rem;color:{% if goal.is_achieved %}#22c55e{% else %}#9ca3af{% endif %};flex-shrink:0;margin-top:2px;"></ion-icon>
+                            {% endif %}
+                            <div class="flex-grow-1">
+                                <p style="margin:0;font-size:.88rem;color:#374151;
+                                          {% if goal.is_achieved %}text-decoration:line-through;color:#9ca3af;{% endif %}">
+                                    {{ goal.description }}
+                                </p>
+                                {% if goal.target_date %}
+                                <span style="font-size:.75rem;color:#9ca3af;">
+                                    {% trans "Target:" %} {{ goal.target_date|date:"d M Y" }}
+                                </span>
+                                {% endif %}
+                                {% if goal.notes %}
+                                <p style="margin:4px 0 0;font-size:.78rem;color:#9ca3af;">{{ goal.notes }}</p>
+                                {% endif %}
+                            </div>
+                            {% if request.user.is_superuser or perms.pip_management.delete_performanceimprovementplan %}
+                            <a href="{% url 'pip-goal-delete' goal.id %}"
+                               onclick="return confirm('{% trans "Remove this goal?" %}')"
+                               style="text-decoration:none;color:#ef4444;margin-top:2px;"
+                               title="{% trans 'Delete' %}">
+                                <ion-icon name="trash-outline" style="font-size:1rem;"></ion-icon>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-3" style="font-size:.88rem;">
+                    <ion-icon name="flag-outline" style="font-size:2rem;display:block;margin:0 auto 6px;"></ion-icon>
+                    {% trans "No goals added yet." %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- RIGHT: Progress Reviews -->
+        <div class="col-lg-5">
+            <div class="oh-kanban-card">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="fw-bold mb-0">
+                        <ion-icon name="clipboard-outline" class="me-1" style="color:#6366f1;"></ion-icon>
+                        {% trans "Progress Reviews" %}
+                    </h5>
+                    {% if request.user.is_superuser or perms.pip_management.change_performanceimprovementplan %}
+                    <button class="oh-btn oh-btn--light-bkg oh-btn--sm"
+                            data-toggle="oh-modal-toggle" data-target="#addReviewModal">
+                        <ion-icon name="add-outline"></ion-icon> {% trans "Add Review" %}
+                    </button>
+                    {% endif %}
+                </div>
+
+                {% if reviews %}
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    {% for review in reviews %}
+                    <div style="border-left:3px solid #6366f1;padding:10px 14px;
+                                background:#f8f9ff;border-radius:0 8px 8px 0;">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="fw-semibold" style="font-size:.85rem;color:#374151;">
+                                {{ review.review_date|date:"d M Y" }}
+                            </span>
+                            {% if review.reviewed_by %}
+                            <span style="font-size:.75rem;color:#9ca3af;">
+                                {% trans "by" %} {{ review.reviewed_by.get_full_name }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <p style="margin:0;font-size:.85rem;color:#6b7280;line-height:1.6;white-space:pre-line;">
+                            {{ review.progress_notes }}
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4" style="font-size:.88rem;">
+                    <ion-icon name="clipboard-outline" style="font-size:2.5rem;display:block;margin:0 auto 6px;color:#d1d5db;"></ion-icon>
+                    {% trans "No progress reviews yet." %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Add Goal Modal -->
+<div class="oh-modal" id="addGoalModal" role="dialog" aria-hidden="true">
+    <div class="oh-modal__dialog" style="max-width:560px;">
+        <div class="oh-modal__dialog-header">
+            <h2 class="oh-modal__dialog-title">{% trans "Add Goal" %}</h2>
+            <button type="button" class="oh-modal__close"
+                    onclick="$('#addGoalModal').removeClass('oh-modal--show')"
+                    aria-label="{% trans 'Close' %}">
+                <ion-icon name="close-outline"></ion-icon>
+            </button>
+        </div>
+        <form method="post" action="{% url 'pip-goal-add' pip.id %}">
+            {% csrf_token %}
+            <div class="oh-modal__dialog-body">
+                <div class="oh-input-group mb-3">
+                    <label class="oh-label">{{ goal_form.description.label }}</label>
+                    {{ goal_form.description }}
+                </div>
+                <div class="oh-input-group mb-3">
+                    <label class="oh-label">{{ goal_form.target_date.label }}
+                        <span class="text-muted" style="font-size:.78rem;">({% trans "optional" %})</span>
+                    </label>
+                    {{ goal_form.target_date }}
+                </div>
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ goal_form.notes.label }}
+                        <span class="text-muted" style="font-size:.78rem;">({% trans "optional" %})</span>
+                    </label>
+                    {{ goal_form.notes }}
+                </div>
+            </div>
+            <div class="oh-modal__dialog-footer">
+                <button type="button" class="oh-btn oh-btn--light-bkg"
+                        onclick="$('#addGoalModal').removeClass('oh-modal--show')">
+                    {% trans "Cancel" %}
+                </button>
+                <button type="submit" class="oh-btn oh-btn--secondary">{% trans "Add Goal" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Review Modal -->
+<div class="oh-modal" id="addReviewModal" role="dialog" aria-hidden="true">
+    <div class="oh-modal__dialog" style="max-width:560px;">
+        <div class="oh-modal__dialog-header">
+            <h2 class="oh-modal__dialog-title">{% trans "Add Progress Review" %}</h2>
+            <button type="button" class="oh-modal__close"
+                    onclick="$('#addReviewModal').removeClass('oh-modal--show')"
+                    aria-label="{% trans 'Close' %}">
+                <ion-icon name="close-outline"></ion-icon>
+            </button>
+        </div>
+        <form method="post" action="{% url 'pip-review-add' pip.id %}">
+            {% csrf_token %}
+            <div class="oh-modal__dialog-body">
+                <div class="oh-input-group mb-3">
+                    <label class="oh-label">{{ review_form.review_date.label }}</label>
+                    {{ review_form.review_date }}
+                </div>
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ review_form.progress_notes.label }}</label>
+                    {{ review_form.progress_notes }}
+                </div>
+            </div>
+            <div class="oh-modal__dialog-footer">
+                <button type="button" class="oh-btn oh-btn--light-bkg"
+                        onclick="$('#addReviewModal').removeClass('oh-modal--show')">
+                    {% trans "Cancel" %}
+                </button>
+                <button type="submit" class="oh-btn oh-btn--secondary">{% trans "Add Review" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit PIP Modal -->
+<div class="oh-modal" id="pipEditModal" role="dialog" aria-hidden="true">
+    <div class="oh-modal__dialog" style="max-width:780px;">
+        <div id="pipEditModalTarget"></div>
+    </div>
+</div>
+
+{% endblock %}

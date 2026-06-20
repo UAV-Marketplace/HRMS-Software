@@ -1,0 +1,107 @@
+{% load i18n %}
+{% load static %}
+
+<div class="oh-modal__dialog-header">
+    <h2 class="oh-modal__dialog-title">
+        {% if pip %}{% trans "Edit PIP" %} — {{ pip.employee.get_full_name }}
+        {% else %}{% trans "New Performance Improvement Plan" %}{% endif %}
+    </h2>
+    <button type="button" class="oh-modal__close"
+            onclick="$('#pipCreateModal, #pipEditModal').removeClass('oh-modal--show')"
+            aria-label="{% trans 'Close' %}">
+        <ion-icon name="close-outline"></ion-icon>
+    </button>
+</div>
+
+<form method="post"
+      {% if pip %}action="{% url 'pip-update' pip.id %}"{% else %}action="{% url 'pip-create' %}"{% endif %}
+      hx-post="{% if pip %}{% url 'pip-update' pip.id %}{% else %}{% url 'pip-create' %}{% endif %}"
+      hx-target="#pipCreateModalTarget"
+      hx-swap="innerHTML">
+    {% csrf_token %}
+    <div class="oh-modal__dialog-body" style="max-height:72vh;overflow-y:auto;">
+
+        <div class="oh-input-group mb-3">
+            <label class="oh-label">{{ form.employee.label }}</label>
+            {{ form.employee }}
+            {% if form.employee.errors %}
+            <p class="text-danger" style="font-size:.8rem;margin-top:4px;">{{ form.employee.errors|join:", " }}</p>
+            {% endif %}
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.start_date.label }}</label>
+                    {{ form.start_date }}
+                    {% if form.start_date.errors %}
+                    <p class="text-danger" style="font-size:.8rem;margin-top:4px;">{{ form.start_date.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="oh-input-group">
+                    <label class="oh-label">{{ form.end_date.label }}</label>
+                    {{ form.end_date }}
+                    {% if form.end_date.errors %}
+                    <p class="text-danger" style="font-size:.8rem;margin-top:4px;">{{ form.end_date.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="oh-input-group mb-3">
+            <label class="oh-label">{{ form.status.label }}</label>
+            {{ form.status }}
+            {% if form.status.errors %}
+            <p class="text-danger" style="font-size:.8rem;margin-top:4px;">{{ form.status.errors|join:", " }}</p>
+            {% endif %}
+        </div>
+
+        <div class="oh-input-group mb-3">
+            <label class="oh-label">{{ form.reason.label }}</label>
+            {{ form.reason }}
+            {% if form.reason.errors %}
+            <p class="text-danger" style="font-size:.8rem;margin-top:4px;">{{ form.reason.errors|join:", " }}</p>
+            {% endif %}
+        </div>
+
+        <div class="oh-input-group mb-3">
+            <label class="oh-label">{{ form.objectives.label }}</label>
+            {{ form.objectives }}
+            {% if form.objectives.errors %}
+            <p class="text-danger" style="font-size:.8rem;margin-top:4px;">{{ form.objectives.errors|join:", " }}</p>
+            {% endif %}
+        </div>
+
+        <div class="oh-input-group mb-3">
+            <label class="oh-label">{{ form.support_provided.label }}
+                <span class="text-muted" style="font-size:.78rem;">({% trans "optional" %})</span>
+            </label>
+            {{ form.support_provided }}
+        </div>
+
+        <div class="oh-input-group mb-3">
+            <label class="oh-label">{{ form.outcome_notes.label }}
+                <span class="text-muted" style="font-size:.78rem;">({% trans "fill when closing" %})</span>
+            </label>
+            {{ form.outcome_notes }}
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" style="font-size:.85rem;">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="oh-modal__dialog-footer">
+        <button type="button" class="oh-btn oh-btn--light-bkg"
+                onclick="$('#pipCreateModal, #pipEditModal').removeClass('oh-modal--show')">
+            {% trans "Cancel" %}
+        </button>
+        <button type="submit" class="oh-btn oh-btn--secondary">
+            {% if pip %}{% trans "Save Changes" %}{% else %}{% trans "Create PIP" %}{% endif %}
+        </button>
+    </div>
+</form>

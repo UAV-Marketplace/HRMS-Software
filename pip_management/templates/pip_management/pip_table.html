@@ -1,0 +1,120 @@
+{% load i18n %}
+
+{% if plans.object_list %}
+<div class="oh-kanban-card" style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:.88rem;">
+        <thead>
+            <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+                <th style="padding:12px 16px;text-align:left;font-weight:600;color:#374151;">{% trans "Employee" %}</th>
+                <th style="padding:12px 16px;text-align:center;font-weight:600;color:#374151;">{% trans "Status" %}</th>
+                <th style="padding:12px 16px;text-align:center;font-weight:600;color:#374151;">{% trans "Period" %}</th>
+                <th style="padding:12px 16px;text-align:center;font-weight:600;color:#374151;">{% trans "Goals" %}</th>
+                <th style="padding:12px 16px;text-align:center;font-weight:600;color:#374151;">{% trans "Actions" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plan in plans %}
+            <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:12px 16px;">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:36px;height:36px;border-radius:50%;
+                                    background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                                    display:flex;align-items:center;justify-content:center;
+                                    color:#fff;font-weight:700;font-size:.8rem;flex-shrink:0;">
+                            {{ plan.employee.employee_first_name|first|upper }}
+                        </div>
+                        <div>
+                            <div class="fw-semibold">{{ plan.employee.get_full_name }}</div>
+                            <div class="text-muted" style="font-size:.75rem;">
+                                {{ plan.employee.employee_work_info.department_id|default:"" }}
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td style="padding:12px 16px;text-align:center;">
+                    <span style="display:inline-block;padding:3px 10px;border-radius:12px;
+                                 font-size:.75rem;font-weight:600;color:#fff;
+                                 background:{{ plan.status_color }};">
+                        {{ plan.get_status_display }}
+                    </span>
+                </td>
+                <td style="padding:12px 16px;text-align:center;color:#6b7280;font-size:.82rem;">
+                    {{ plan.start_date|date:"d M Y" }}<br>
+                    <span style="font-size:.72rem;">to {{ plan.end_date|date:"d M Y" }}</span><br>
+                    <span style="font-size:.72rem;color:#9ca3af;">({{ plan.duration_days }} days)</span>
+                </td>
+                <td style="padding:12px 16px;text-align:center;">
+                    <span style="font-size:.85rem;color:#374151;">
+                        {{ plan.achieved_goals_count }} / {{ plan.goals_count }}
+                    </span>
+                    <div style="font-size:.72rem;color:#9ca3af;">{% trans "achieved" %}</div>
+                </td>
+                <td style="padding:12px 16px;text-align:center;">
+                    <div class="d-flex gap-1 justify-content-center flex-wrap">
+                        <a href="{% url 'pip-detail' plan.id %}"
+                           class="oh-btn oh-btn--light-bkg oh-btn--sm"
+                           title="{% trans 'View Detail' %}">
+                            <ion-icon name="eye-outline"></ion-icon>
+                        </a>
+                        {% if request.user.is_superuser or perms.pip_management.change_performanceimprovementplan %}
+                        <button class="oh-btn oh-btn--light-bkg oh-btn--sm"
+                                title="{% trans 'Edit' %}"
+                                data-toggle="oh-modal-toggle" data-target="#pipEditModal"
+                                hx-get="{% url 'pip-update' plan.id %}"
+                                hx-target="#pipEditModalTarget">
+                            <ion-icon name="create-outline"></ion-icon>
+                        </button>
+                        {% endif %}
+                        {% if request.user.is_superuser or perms.pip_management.delete_performanceimprovementplan %}
+                        <button class="oh-btn oh-btn--danger-bkg oh-btn--sm"
+                                title="{% trans 'Delete' %}"
+                                onclick="if(confirm('{% trans "Delete this PIP?" %}'))
+                                    htmx.ajax('POST','{% url 'pip-delete' plan.id %}',
+                                              {target:'#pipTable', headers:{'X-CSRFToken':'{{ csrf_token }}'}})">
+                            <ion-icon name="trash-outline"></ion-icon>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if plans.paginator.num_pages > 1 %}
+<div class="oh-pagination mt-3">
+    <span class="oh-pagination__page">
+        {% trans "Page" %} {{ plans.number }} {% trans "of" %} {{ plans.paginator.num_pages }}
+    </span>
+    <nav class="oh-pagination__nav">
+        <ul class="oh-pagination__items">
+            {% if plans.has_previous %}
+            <li class="oh-pagination__item oh-pagination__item--wide">
+                <a href="?{{ pd }}&page={{ plans.previous_page_number }}" class="oh-pagination__link"
+                   hx-get="{% url 'pip-filter' %}?{{ pd }}&page={{ plans.previous_page_number }}"
+                   hx-target="#pipTable">
+                    {% trans "Previous" %}
+                </a>
+            </li>
+            {% endif %}
+            {% if plans.has_next %}
+            <li class="oh-pagination__item oh-pagination__item--wide">
+                <a href="?{{ pd }}&page={{ plans.next_page_number }}" class="oh-pagination__link"
+                   hx-get="{% url 'pip-filter' %}?{{ pd }}&page={{ plans.next_page_number }}"
+                   hx-target="#pipTable">
+                    {% trans "Next" %}
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% else %}
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:50vh;">
+    <ion-icon name="document-text-outline" style="font-size:80px;color:#d1d5db;"></ion-icon>
+    <h5 class="oh-404__subtitle mt-3">{% trans "No Performance Improvement Plans found." %}</h5>
+</div>
+{% endif %}

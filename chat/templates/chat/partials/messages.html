@@ -1,0 +1,47 @@
+{% load i18n %}
+{% if messages_qs %}
+    {% for msg in messages_qs %}
+    {% if msg.sender == viewer %}
+    <!-- Own message: right -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+        <div style="max-width:72%;background:#6366f1;color:#fff;
+                    padding:10px 14px;border-radius:18px 18px 4px 18px;
+                    font-size:.88rem;line-height:1.55;word-break:break-word;">
+            {{ msg.message }}
+            <div style="font-size:.68rem;opacity:.65;margin-top:4px;text-align:right;">
+                {{ msg.sent_at|time:"H:i" }}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Other's message: left -->
+    <div style="display:flex;justify-content:flex-start;gap:8px;margin-bottom:6px;align-items:flex-end;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#e5e7eb;
+                    display:flex;align-items:center;justify-content:center;
+                    font-weight:700;font-size:.74rem;color:#6b7280;flex-shrink:0;">
+            {{ msg.sender_initial }}
+        </div>
+        <div style="max-width:72%;">
+            <div style="font-size:.7rem;color:#9ca3af;margin-bottom:3px;padding-left:2px;">
+                {{ msg.sender_name }}
+            </div>
+            <div style="background:#f3f4f6;color:#374151;
+                        padding:10px 14px;border-radius:18px 18px 18px 4px;
+                        font-size:.88rem;line-height:1.55;word-break:break-word;">
+                {{ msg.message }}
+                <div style="font-size:.68rem;color:#9ca3af;margin-top:4px;text-align:right;">
+                    {{ msg.sent_at|time:"H:i" }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+{% else %}
+<div style="display:flex;flex-direction:column;align-items:center;
+            justify-content:center;height:100%;text-align:center;color:#9ca3af;">
+    <ion-icon name="chatbubbles-outline"
+              style="font-size:3rem;color:#e5e7eb;display:block;margin-bottom:10px;"></ion-icon>
+    <span style="font-size:.85rem;">{% trans "No messages yet. Say hello!" %}</span>
+</div>
+{% endif %}

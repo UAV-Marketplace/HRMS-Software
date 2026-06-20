@@ -1,0 +1,64 @@
+{% load i18n %}
+
+<div style="flex:1;min-height:0;overflow-y:auto;">
+    {% for conv in conversations %}
+    <div onclick="loadWidgetConv({{ conv.id }})"
+         style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+                cursor:pointer;border-bottom:1px solid #f3f4f6;transition:background .12s;"
+         onmouseover="this.style.background='#f9fafb'"
+         onmouseout="this.style.background=''">
+
+        <!-- Avatar with unread badge -->
+        <div style="position:relative;flex-shrink:0;">
+            <div style="width:38px;height:38px;border-radius:50%;
+                        background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                        display:flex;align-items:center;justify-content:center;
+                        color:#fff;font-weight:700;font-size:.85rem;">
+                {{ conv.employee.employee_first_name|first|upper }}
+            </div>
+            {% with unread=conv.unread_for_hr %}
+            {% if unread %}
+            <span style="position:absolute;top:-3px;right:-3px;background:#ef4444;
+                         color:#fff;font-size:.6rem;font-weight:700;min-width:16px;
+                         height:16px;border-radius:8px;display:flex;
+                         align-items:center;justify-content:center;
+                         padding:0 3px;border:2px solid #fff;line-height:1;">
+                {{ unread }}
+            </span>
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Name + last message -->
+        <div style="flex:1;min-width:0;">
+            <div style="font-size:.84rem;font-weight:{% if conv.unread_for_hr %}700{% else %}500{% endif %};
+                        color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                {{ conv.employee.get_full_name }}
+            </div>
+            {% with last=conv.last_message %}
+            {% if last %}
+            <div style="font-size:.73rem;color:#9ca3af;white-space:nowrap;
+                        overflow:hidden;text-overflow:ellipsis;margin-top:1px;">
+                {{ last.message|truncatechars:36 }}
+            </div>
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Time -->
+        {% with last=conv.last_message %}
+        {% if last %}
+        <div style="font-size:.68rem;color:#d1d5db;flex-shrink:0;align-self:flex-start;margin-top:2px;">
+            {{ last.sent_at|time:"H:i" }}
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+    {% empty %}
+    <div style="display:flex;flex-direction:column;align-items:center;
+                justify-content:center;height:200px;text-align:center;padding:20px;color:#9ca3af;">
+        <ion-icon name="chatbubbles-outline" style="font-size:2.5rem;margin-bottom:10px;color:#e5e7eb;"></ion-icon>
+        <div style="font-size:.84rem;">{% trans "No conversations yet" %}</div>
+    </div>
+    {% endfor %}
+</div>
