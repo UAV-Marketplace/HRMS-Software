@@ -1,4 +1,88 @@
-<form hx-post="{% url 'geo-config' %}" hx-swap="none" hx-on-htmx-after-request="$('#reloadMessagesButton').click();">
-    {% csrf_token %}
-    {{form.as_p}}
-</form>
+{% load i18n %}
+<div id="ohGeofencingMessages"></div>
+{% if messages %}
+<div class="oh-wrapper">
+    {% for message in messages %}
+    <div class="oh-alert-container">
+        <div class="oh-alert oh-alert--animated {{message.tags}}">
+        {{ message }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+<div class="oh-inner-sidebar-content mt-3">
+    <div class="oh-inner-sidebar-content__header d-flex justify-content-between align-items-center pb-3">
+        <h2 class="oh-inner-sidebar-content__title">{% trans 'Geofence Locations' %}</h2>
+        {% if perms.geofencing.add_geofencing %}
+        <button class="oh-btn oh-btn--secondary oh-btn--shadow" hx-target="#objectCreateModalTarget" type="button"
+            hx-get="{% url 'geo-config-create' %}"
+            data-toggle="oh-modal-toggle" data-target="#objectCreateModal">
+            <ion-icon name="add-outline" class="me-1"></ion-icon>
+            {% trans 'Add Location' %}
+        </button>
+        {% endif %}
+    </div>
+    {% if locations %}
+    <div class="oh-sticky-table">
+        <div class="oh-sticky-table__table oh-table--sortable">
+            <div class="oh-sticky-table__thead">
+                <div class="oh-sticky-table__tr">
+                    <div class="oh-sticky-table__sd">{% trans 'Name' %}</div>
+                    <div class="oh-sticky-table__th">{% trans 'Latitude' %}</div>
+                    <div class="oh-sticky-table__th">{% trans 'Longitude' %}</div>
+                    <div class="oh-sticky-table__th">{% trans 'Radius (meters)' %}</div>
+                    <div class="oh-sticky-table__th">{% trans 'Enabled' %}</div>
+                    {% if perms.geofencing.change_geofencing or perms.geofencing.delete_geofencing %}
+                    <div class="oh-sticky-table__th">{% trans 'Actions' %}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="oh-sticky-table__tbody">
+                {% for location in locations %}
+                <div class="oh-sticky-table__tr">
+                    <div class="oh-sticky-table__sd">{{ location.name|default:"-" }}</div>
+                    <div class="oh-sticky-table__td">{{ location.latitude }}</div>
+                    <div class="oh-sticky-table__td">{{ location.longitude }}</div>
+                    <div class="oh-sticky-table__td">{{ location.radius_in_meters }}</div>
+                    <div class="oh-sticky-table__td">
+                        {% if location.start %}
+                            <span class="oh-label oh-label--success">{% trans 'Yes' %}</span>
+                        {% else %}
+                            <span class="oh-label oh-label--warning">{% trans 'No' %}</span>
+                        {% endif %}
+                    </div>
+                    {% if perms.geofencing.change_geofencing or perms.geofencing.delete_geofencing %}
+                    <div class="oh-sticky-table__td">
+                        <div class="oh-btn-group">
+                            {% if perms.geofencing.change_geofencing %}
+                            <a hx-get="{% url 'geo-config-update' location.id %}"
+                                hx-target="#objectUpdateModalTarget" type="button" data-toggle="oh-modal-toggle"
+                                data-target="#objectUpdateModal"
+                                class="oh-btn oh-btn--light-bkg w-50" title="{% trans 'Edit' %}">
+                                <ion-icon name="create-outline"></ion-icon></a>
+                            {% endif %}
+                            {% if perms.geofencing.delete_geofencing %}
+                            <form class="w-50" hx-confirm="{% trans 'Are you sure you want to delete this geofence location?' %}"
+                                hx-post="{% url 'geo-config-delete' location.id %}" hx-target="#geo">
+                                {% csrf_token %}
+                                <button type="submit" class="oh-btn oh-btn--danger-outline oh-btn--light-bkg w-100"
+                                    title="{% trans 'Delete' %}">
+                                    <ion-icon name="trash-outline"></ion-icon>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%;">
+        <h5 class="oh-404__subtitle">{% trans "No geofence locations configured yet." %}</h5>
+    </div>
+    {% endif %}
+</div>

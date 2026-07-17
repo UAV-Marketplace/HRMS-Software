@@ -1,7 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
-from django.http import QueryDict
+from django.http import HttpResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from geopy.distance import geodesic
@@ -27,8 +28,8 @@ class GeoFencingSetupGetPostAPIView(APIView):
     )
     def get(self, request):
         company = request.user.employee_get.get_company()
-        location = get_object_or_404(GeoFencing, company_id=company.id)
-        serializer = GeoFencingSetupSerializer(location)
+        locations = GeoFencing.objects.filter(company_id=company)
+        serializer = GeoFencingSetupSerializer(locations, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @method_decorator(
@@ -96,38 +97,35 @@ class GeoFencingEmployeeLocationCheckAPIView(APIView):
         except Exception as e:
             raise serializers.ValidationError(e)
 
-    def get_company_location(self, request):
+    def get_active_company_locations(self, request):
         company = self.get_company(request)
-        try:
-            location = GeoFencing.objects.get(company_id=company)
-            return location
-        except Exception as e:
-            raise serializers.ValidationError(e)
+        return list(GeoFencing.objects.filter(company_id=company, start=True))
 
     def post(self, request):
         serializer = EmployeeLocationSerializer(data=request.data)
-        company_location = self.get_company_location(request)
-        if company_location.start:
-            if serializer.is_valid():
+        active_locations = self.get_active_company_locations(request)
+        if not active_locations:
+            raise serializers.ValidationError("Geofencing is not yet started..")
+        if serializer.is_valid():
+            employee_location = (
+                request.data.get("latitude"),
+                request.data.get("longitude"),
+            )
+            for company_location in active_locations:
                 geofence_center = (
                     company_location.latitude,
                     company_location.longitude,
-                )
-                employee_location = (
-                    request.data.get("latitude"),
-                    request.data.get("longitude"),
                 )
                 distance = geodesic(geofence_center, employee_location).meters
                 if distance <= company_location.radius_in_meters:
                     return Response(
                         {"message": "Inside the geofence"}, status=status.HTTP_200_OK
                     )
-                return Response(
-                    {"message": "Outside the geofence"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        raise serializers.ValidationError("Geofencing is not yet started..")
+            return Response(
+                {"message": "Outside the geofence"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GeoFencingSetUpPermissionCheck(APIView):
@@ -152,38 +150,76 @@ def get_company(request):
         raise serializers.ValidationError(e)
 
 
-def get_company_location(request):
+def get_company_locations(request):
     company = get_company(request)
-    try:
-        location = GeoFencing.objects.get(company_id=company)
-        return location
-    except Exception as e:
-        raise serializers.ValidationError(e)
+    return GeoFencing.objects.filter(company_id=company).order_by("-id")
+
+
+def geofencing_table_response(request, success_message):
+    """
+    Closes any open geofencing modal and pushes a fresh copy of the location
+    table into #geo via an out-of-band swap.
+    """
+    messages.success(request, success_message)
+    table_html = render_to_string(
+        "geo_config.html",
+        {"locations": get_company_locations(request), "messages": messages.get_messages(request)},
+        request=request,
+    )
+    return HttpResponse(
+        "<script>$('.oh-modal--show').removeClass('oh-modal--show');</script>"
+        f'<div id="geo" hx-swap-oob="true">{table_html}</div>'
+    )
 
 
 @login_required
 @permission_required("geofencing.add_localbackup")
 def geo_location_config(request):
+    locations = get_company_locations(request)
+    return render(request, "geo_config.html", {"locations": locations})
+
+
+@login_required
+@permission_required("geofencing.add_geofencing")
+def create_geofencing(request):
     if request.method == "POST":
-        try:
-            form = GeoFencingSetupForm(
-                request.POST, instance=get_company_location(request)
-            )
-        except Exception as e:
-            data = request.POST
-            if isinstance(data, QueryDict):
-                data = data.dict()
-            if get_company(request) == None:
-                data["company_id"] = None
-            form = GeoFencingSetupForm(data=data)
+        data = request.POST
+        if isinstance(data, QueryDict):
+            data = data.dict()
+        company = get_company(request)
+        data["company_id"] = company.id if company else None
+        form = GeoFencingSetupForm(data=data)
         if form.is_valid():
             form.save()
-            messages.success(request, _("Geofencing config created successfully."))
-        else:
-            messages.info(request, "Not valid")
-
-    try:
-        form = GeoFencingSetupForm(instance=get_company_location(request))
-    except Exception as e:
+            return geofencing_table_response(
+                request, _("Geofence location added successfully.")
+            )
+    else:
         form = GeoFencingSetupForm()
-    return render(request, "geo_config.html", {"form": form})
+    return render(request, "geo_config_form.html", {"form": form})
+
+
+@login_required
+@permission_required("geofencing.change_geofencing")
+def update_geofencing(request, pk):
+    location = get_object_or_404(GeoFencing, pk=pk)
+    if request.method == "POST":
+        form = GeoFencingSetupForm(request.POST, instance=location)
+        if form.is_valid():
+            form.save()
+            return geofencing_table_response(
+                request, _("Geofence location updated successfully.")
+            )
+    else:
+        form = GeoFencingSetupForm(instance=location)
+    return render(request, "geo_config_form.html", {"form": form, "location": location})
+
+
+@login_required
+@permission_required("geofencing.delete_geofencing")
+def delete_geofencing(request, pk):
+    location = get_object_or_404(GeoFencing, pk=pk)
+    location.delete()
+    messages.success(request, _("Geofence location deleted successfully."))
+    locations = get_company_locations(request)
+    return render(request, "geo_config.html", {"locations": locations})

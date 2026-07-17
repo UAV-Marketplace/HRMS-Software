@@ -44,8 +44,17 @@ class MailSendThread(Thread):
                 request=self.request,
             )
             attachments = []
+            pdf_failed = False
             for instance in record["instances"]:
                 response = payslip_pdf(self.request, instance.id)
+                if response.status_code != 200:
+                    logger.error(
+                        "Payslip PDF generation failed for payslip %s: %s",
+                        instance.id,
+                        response.content.decode(errors="replace"),
+                    )
+                    pdf_failed = True
+                    continue
                 attachments.append(
                     (
                         f"{instance.get_payslip_title()}.pdf",
@@ -53,12 +62,19 @@ class MailSendThread(Thread):
                         "application/pdf",
                     )
                 )
+            if pdf_failed or not attachments:
+                logger.error(
+                    "Skipping payslip mail to %s: one or more payslip PDFs failed to generate",
+                    record["instances"][0].employee_id,
+                )
+                continue
             employee = record["instances"][0].employee_id
             email_backend = ConfiguredEmailBackend()
             display_email_name = email_backend.dynamic_from_email_with_display_name
+            reply_to = display_email_name
             if self.request:
                 try:
-                    display_email_name = f"{self.request.user.employee_get.get_full_name()} <{self.request.user.employee_get.email}>"
+                    reply_to = f"{self.request.user.employee_get.get_full_name()} <{self.request.user.employee_get.email}>"
                 except:
                     logger.error(Exception)
 
@@ -67,7 +83,7 @@ class MailSendThread(Thread):
                 html_message,
                 display_email_name,
                 [employee.get_mail()],
-                reply_to=[display_email_name],
+                reply_to=[reply_to],
             )
             email.attachments = attachments
 

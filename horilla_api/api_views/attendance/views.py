@@ -70,7 +70,11 @@ class ClockInAPIView(APIView):
     def post(self, request):
         if not request.user.employee_get.check_online():
             try:
-                if request.user.employee_get.get_company().geo_fencing.start:
+                if (
+                    request.user.employee_get.get_company()
+                    .geo_fencing.filter(start=True)
+                    .exists()
+                ):
                     from geofencing.views import GeoFencingEmployeeLocationCheckAPIView
 
                     location_api_view = GeoFencingEmployeeLocationCheckAPIView()
@@ -150,7 +154,11 @@ class ClockOutAPIView(APIView):
     def post(self, request):
 
         try:
-            if request.user.employee_get.get_company().geo_fencing.start:
+            if (
+                request.user.employee_get.get_company()
+                .geo_fencing.filter(start=True)
+                .exists()
+            ):
                 from geofencing.views import GeoFencingEmployeeLocationCheckAPIView
 
                 location_api_view = GeoFencingEmployeeLocationCheckAPIView()

@@ -13,6 +13,8 @@ FROM python:3.10-slim-bullseye AS runtime
 
 ENV PYTHONUNBUFFERED=1
 
+RUN apt-get update && apt-get install -y --no-install-recommends wkhtmltopdf && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app/
 
 COPY --from=builder /install /usr/local
@@ -23,4 +25,4 @@ RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8000
 
-CMD ["python3", "manage.py", "runserver"]
+CMD ["sh", "./entrypoint.sh"]

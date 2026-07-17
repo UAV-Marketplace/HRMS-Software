@@ -1,14 +1,14 @@
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
 from geopy.geocoders import Nominatim
 
 
 class GeoFencing(models.Model):
+    name = models.CharField(max_length=255, blank=True, null=True)
     latitude = models.FloatField()
     longitude = models.FloatField()
     radius_in_meters = models.IntegerField()
-    company_id = models.OneToOneField(
+    company_id = models.ForeignKey(
         "base.Company",
         related_name="geo_fencing",
         on_delete=models.CASCADE,
@@ -18,13 +18,6 @@ class GeoFencing(models.Model):
     start = models.BooleanField(default=False)
 
     def clean(self):
-        if self.company_id is None:
-            qs = GeoFencing.objects.filter(company_id__isnull=True)
-            if self.pk:
-                qs = qs.exclude(pk=self.pk)
-            if qs.exists():
-                raise ValidationError("Only one GeoFencing can have a null company_id.")
-
         geolocator = Nominatim(
             user_agent="geo_checker_unique"
         )  # Unique user-agent is important
@@ -44,11 +37,5 @@ class GeoFencing(models.Model):
         self.full_clean()  # Run clean before save
         super().save(*args, **kwargs)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["company_id"],
-                name="unique_company_id_when_not_null_geofencing",
-                condition=~Q(company_id=None),
-            )
-        ]
+    def __str__(self):
+        return self.name or f"Geofence #{self.pk}"

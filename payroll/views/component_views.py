@@ -65,6 +65,7 @@ from payroll.methods.methods import (
     calculate_employer_contribution,
     compute_net_pay,
     compute_salary_on_period,
+    generate_ctc_payslip_data,
     paginator_qry,
     save_payslip,
 )
@@ -770,7 +771,10 @@ def generate_payslip(request):
                 ).first()
                 if start_date < contract.contract_start_date:
                     start_date = contract.contract_start_date
-                payslip = payroll_calculation(employee, start_date, end_date)
+                if contract.wage_type == "monthly":
+                    payslip = generate_ctc_payslip_data(employee, start_date, end_date)
+                else:
+                    payslip = payroll_calculation(employee, start_date, end_date)
                 payslips.append(payslip)
                 json_data.append(payslip["json_data"])
 
@@ -900,7 +904,15 @@ def create_payslip(request, new_post_data=None):
                 employee = form.cleaned_data["employee_id"]
                 start_date = form.cleaned_data["start_date"]
                 end_date = form.cleaned_data["end_date"]
-                payslip_data = payroll_calculation(employee, start_date, end_date)
+                active_contract = Contract.objects.filter(
+                    employee_id=employee, contract_status="active"
+                ).first()
+                if active_contract and active_contract.wage_type == "monthly":
+                    payslip_data = generate_ctc_payslip_data(
+                        employee, start_date, end_date
+                    )
+                else:
+                    payslip_data = payroll_calculation(employee, start_date, end_date)
                 payslip_data["payslip"] = payslip
                 data = {}
                 data["employee"] = employee
@@ -939,7 +951,7 @@ def create_payslip(request, new_post_data=None):
                 return HorillaRedirect(
                     request,
                     redirect_to=reverse(
-                        "view-payslip", kwargs={"payslip_id": payslip.pk}
+                        "view-created-payslip", kwargs={"payslip_id": payslip.pk}
                     ),
                 )
 
@@ -1020,7 +1032,13 @@ def view_individual_payslip(request, employee_id, start_date, end_date):
     This method is used to render the template for viewing a payslip.
     """
 
-    payslip_data = payroll_calculation(employee_id, start_date, end_date)
+    active_contract = Contract.objects.filter(
+        employee_id=employee_id, contract_status="active"
+    ).first()
+    if active_contract and active_contract.wage_type == "monthly":
+        payslip_data = generate_ctc_payslip_data(employee_id, start_date, end_date)
+    else:
+        payslip_data = payroll_calculation(employee_id, start_date, end_date)
     return render(
         request,
         "payroll/payslip/individual_payslip.html",

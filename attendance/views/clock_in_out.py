@@ -41,6 +41,63 @@ from horilla.horilla_middlewares import _thread_locals
 from horilla.http import HorillaRedirect
 
 
+def geofence_violation_response(request, message):
+    """
+    Returns an HttpResponse rejecting a clock-in/out that failed the geofence check.
+    """
+    return HttpResponse(f'<span class="text-danger">{message}</span>')
+
+
+def check_geofencing(request, employee):
+    """
+    Validates the employee's submitted location against their company's GeoFencing
+    locations, if any are configured and enabled. A company can have multiple
+    geofenced locations (e.g. one per branch/office); the employee only needs to be
+    within the radius of at least one active location. Coordinates are read from the
+    X-Latitude/X-Longitude headers set by the browser via navigator.geolocation.
+    Requests coming from a biometric device (request.datetime is set) skip this check.
+
+    Returns None if the action is allowed, or an error message string if it should
+    be blocked.
+    """
+    if request.__dict__.get("datetime"):
+        return None
+    try:
+        from geofencing.models import GeoFencing
+
+        company = employee.get_company()
+        active_fences = list(
+            GeoFencing.objects.filter(company_id=company, start=True)
+        )
+    except Exception:
+        return None
+    if not active_fences:
+        return None
+
+    latitude = request.headers.get("X-Latitude")
+    longitude = request.headers.get("X-Longitude")
+    if latitude is None or longitude is None:
+        return _("Location access is required to clock in/out for this company.")
+    try:
+        employee_location = (float(latitude), float(longitude))
+    except (TypeError, ValueError):
+        return _("Invalid location data.")
+
+    from geopy.distance import geodesic
+
+    for geo_fencing in active_fences:
+        geofence_center = (geo_fencing.latitude, geo_fencing.longitude)
+        distance = geodesic(geofence_center, employee_location).meters
+        print(
+            f"[GEOFENCE DEBUG] employee_location={employee_location} "
+            f"fence='{geo_fencing.name}' center={geofence_center} "
+            f"radius={geo_fencing.radius_in_meters} distance={distance:.2f}m"
+        )
+        if distance <= geo_fencing.radius_in_meters:
+            return None
+    return _("You are outside the allowed geofence area.")
+
+
 def late_come_create(attendance):
     """
     used to create late come report
@@ -249,6 +306,9 @@ def clock_in(request):
         if request.__dict__.get("datetime"):
             datetime_now = request.datetime
         if employee and work_info is not None:
+            geofence_error = check_geofencing(request, employee)
+            if geofence_error:
+                return geofence_violation_response(request, geofence_error)
             shift = work_info.shift_id
             date_today = date.today()
             if request.__dict__.get("date"):
@@ -500,6 +560,9 @@ def clock_out(request):
         if request.__dict__.get("datetime"):
             datetime_now = request.datetime
         employee, work_info = employee_exists(request)
+        geofence_error = check_geofencing(request, employee)
+        if geofence_error:
+            return geofence_violation_response(request, geofence_error)
         shift = work_info.shift_id
         date_today = date.today()
         if request.__dict__.get("date"):

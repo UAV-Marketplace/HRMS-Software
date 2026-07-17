@@ -244,6 +244,50 @@
             event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
         })
     </script>
+    <!-- Attach geolocation to clock-in/clock-out requests so the server can enforce geofencing -->
+    <script>
+        (function () {
+            var geofencedPaths = ['/attendance/clock-in', '/attendance/clock-out'];
+            var lastCoords = null;
+
+            function isGeofencedRequest(path) {
+                return path && geofencedPaths.some(function (p) {
+                    return path.indexOf(p) !== -1;
+                });
+            }
+
+            document.body.addEventListener('htmx:confirm', function (event) {
+                if (!isGeofencedRequest(event.detail.path) || !navigator.geolocation) {
+                    return;
+                }
+                event.preventDefault();
+                navigator.geolocation.getCurrentPosition(
+                    function (position) {
+                        lastCoords = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                        };
+                        event.detail.issueRequest(true);
+                    },
+                    function () {
+                        // Location denied/unavailable: proceed without coordinates,
+                        // the server will block the action if geofencing is enforced.
+                        lastCoords = null;
+                        event.detail.issueRequest(true);
+                    },
+                    { enableHighAccuracy: true, timeout: 8000 }
+                );
+            });
+
+            document.body.addEventListener('htmx:configRequest', function (event) {
+                if (!isGeofencedRequest(event.detail.path) || !lastCoords) {
+                    return;
+                }
+                event.detail.headers['X-Latitude'] = lastCoords.latitude;
+                event.detail.headers['X-Longitude'] = lastCoords.longitude;
+            });
+        })();
+    </script>
     <!-- this is the master js  -->
     <script src="{% static '/index/index.js' %}"></script>
     <script src="{% static '/index/saveFilters.js' %}"></script>

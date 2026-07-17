@@ -5,6 +5,7 @@ Payroll related module to write custom calculation methods
 """
 
 import calendar
+import json
 from datetime import date, datetime, timedelta
 
 from dateutil.relativedelta import relativedelta
@@ -491,6 +492,219 @@ def monthly_computation(employee, wage, start_date, end_date, *args, **kwargs):
         "paid_days": paid_days,
         "contract": contract,
     }
+
+
+def _pt_slab(gross, gender, month_abbr):
+    """
+    Maharashtra Professional Tax slab, mirroring the company's reference
+    Deluge implementation (higher slab in February).
+    """
+    if gender == "male":
+        if gross <= 7500:
+            return 0
+        if gross <= 10000:
+            return 175
+        return 300 if month_abbr == "Feb" else 200
+    if gross <= 25000:
+        return 0
+    return 300 if month_abbr == "Feb" else 200
+
+
+def _ctc_breakdown(monthly_ctc, gender, month_abbr):
+    """
+    Derives Basic/HRA/PF/Gratuity/ESIC/PT/Net from a monthly CTC figure,
+    unrounded (rounding only happens once, on the final stored values) —
+    matches the company's reference Deluge implementation exactly.
+    """
+    basic = monthly_ctc * 0.5
+    hra = basic * 0.5
+    employer_pf = 1800 if basic >= 15000 else basic * 0.12
+    gratuity = basic * 0.0481
+    temp = monthly_ctc - employer_pf - gratuity
+    if temp <= 21000:
+        gross = temp / 1.0325
+        employer_esic = gross * 0.0325
+        employee_esic = gross * 0.0075
+    else:
+        gross = temp
+        employer_esic = 0
+        employee_esic = 0
+    employee_pf = employer_pf
+    pt = _pt_slab(gross, gender, month_abbr)
+    total_deductions = employee_pf + employee_esic + pt
+    net = gross - total_deductions
+    special = gross - basic - hra
+    return {
+        "basic": basic,
+        "hra": hra,
+        "special": special,
+        "gross": gross,
+        "employer_pf": employer_pf,
+        "gratuity": gratuity,
+        "employer_esic": employer_esic,
+        "employee_pf": employee_pf,
+        "employee_esic": employee_esic,
+        "pt": pt,
+        "total_deductions": total_deductions,
+        "net": net,
+    }
+
+
+def compute_ctc_salary(fixed_ctc, gender, month_abbr, deduction_days, total_days):
+    """
+    Ports the company's CTC-based salary generation logic (reference: their
+    Zoho Creator Deluge function and cross-checked against their payroll
+    Excel) to Python.
+
+    For absent days, the monthly CTC itself is scaled down by
+    payable_days/total_days, and the full Basic/HRA/PF/Gratuity/ESIC/PT
+    breakdown is re-run on that reduced CTC — so every pay-head, not just Net
+    Pay, reflects the reduced attendance for the month. This matches the
+    company's payroll Excel exactly (verified against a 5-day-absence case).
+    """
+    monthly_ctc = fixed_ctc / 12
+    original = _ctc_breakdown(monthly_ctc, gender, month_abbr)
+    original_net = original["net"]
+
+    payable_days = max(total_days - deduction_days, 0)
+    day_ratio = (payable_days / total_days) if total_days else 0
+    scaled_monthly_ctc = monthly_ctc * day_ratio
+
+    revised = _ctc_breakdown(scaled_monthly_ctc, gender, month_abbr)
+    revised["revised_monthly_ctc"] = scaled_monthly_ctc
+    revised["revised_fixed_ctc"] = scaled_monthly_ctc * 12
+    revised["deduction_days"] = deduction_days
+    revised["payable_days"] = payable_days
+    revised["original_net"] = original_net
+    revised["target_net"] = revised["net"]
+    return revised
+
+
+def get_unmarked_absent_days(employee, start_date, end_date):
+    """
+    Returns the scheduled working days in the period on which the employee
+    has neither an Attendance record nor an approved leave (paid or unpaid)
+    covering that date — i.e. absences that were never formally reported.
+    """
+    if not apps.is_installed("attendance"):
+        return []
+
+    from attendance.models import Attendance
+
+    working_dates = set(get_working_days(start_date, end_date)["working_days_on"])
+
+    attended_dates = set(
+        Attendance.objects.filter(
+            employee_id=employee, attendance_date__range=(start_date, end_date)
+        ).values_list("attendance_date", flat=True)
+    )
+
+    leave_covered_dates = set()
+    for leave in employee.leaverequest_set.filter(status="approved"):
+        for leave_date in leave.requested_dates():
+            if start_date <= leave_date <= end_date:
+                leave_covered_dates.add(leave_date)
+
+    return sorted(
+        working_dates - attended_dates - leave_covered_dates
+    )
+
+
+def generate_ctc_payslip_data(employee, start_date, end_date):
+    """
+    Builds a payslip data dict (same shape as payroll_calculation()'s return
+    value) for CTC-based monthly contracts, using compute_ctc_salary() as the
+    source of truth instead of the generic Allowance/Deduction pipeline.
+    """
+    contract = Contract.objects.filter(
+        employee_id=employee, contract_status="active"
+    ).first()
+    if contract is None:
+        return None
+
+    fixed_ctc = contract.wage
+    gender = employee.gender or "male"
+    month_abbr = start_date.strftime("%b")
+    total_days = get_total_days(start_date, end_date)
+    leave_data = get_leaves(employee, start_date, end_date)
+    unmarked_absent_dates = get_unmarked_absent_days(employee, start_date, end_date)
+    deduction_days = leave_data["unpaid_leaves"] + len(unmarked_absent_dates)
+
+    breakdown = compute_ctc_salary(
+        fixed_ctc, gender, month_abbr, deduction_days, total_days
+    )
+
+    allowances = [
+        {
+            "allowance_id": None,
+            "title": "HRA",
+            "is_taxable": True,
+            "amount": breakdown["hra"],
+        },
+        {
+            "allowance_id": None,
+            "title": "Special Allowance",
+            "is_taxable": True,
+            "amount": breakdown["special"],
+        },
+    ]
+    post_tax_deductions = [
+        {
+            "deduction_id": None,
+            "title": "Employee Provident Fund (PF)",
+            "is_pretax": True,
+            "amount": breakdown["employee_pf"],
+            "employer_contribution_rate": 12.0,
+        },
+        {
+            "deduction_id": None,
+            "title": "Employee State Insurance (ESIC)",
+            "is_pretax": False,
+            "amount": breakdown["employee_esic"],
+            "employer_contribution_rate": 3.25,
+        },
+        {
+            "deduction_id": None,
+            "title": "Professional Tax",
+            "is_pretax": False,
+            "amount": breakdown["pt"],
+            "employer_contribution_rate": 0.0,
+        },
+    ]
+
+    payslip_data = {
+        "employee": employee,
+        "contract_wage": fixed_ctc,
+        "basic_pay": breakdown["basic"],
+        "gross_pay": breakdown["gross"],
+        "taxable_gross_pay": breakdown["gross"] - breakdown["employee_pf"],
+        "net_pay": breakdown["net"],
+        "allowances": allowances,
+        "paid_days": breakdown["payable_days"],
+        "unpaid_days": breakdown["deduction_days"],
+        "basic_pay_deductions": [],
+        "gross_pay_deductions": [],
+        "pretax_deductions": [],
+        "post_tax_deductions": post_tax_deductions,
+        "tax_deductions": [],
+        "net_deductions": [],
+        "total_deductions": breakdown["total_deductions"],
+        # Informational only (not folded into total_deductions/net_pay, which
+        # already reflect the reduced CTC): the gap between what a full,
+        # no-absence month would have paid and what this month actually pays.
+        "loss_of_pay": breakdown["original_net"] - breakdown["net"],
+        "federal_tax": 0,
+        "start_date": start_date,
+        "end_date": end_date,
+        "range": f"{start_date.strftime('%b %d %Y')} - {end_date.strftime('%b %d %Y')}",
+    }
+    data_to_json = payslip_data.copy()
+    data_to_json["employee"] = employee.id
+    data_to_json["start_date"] = start_date.strftime("%Y-%m-%d")
+    data_to_json["end_date"] = end_date.strftime("%Y-%m-%d")
+    payslip_data["json_data"] = json.dumps(data_to_json)
+    payslip_data["installments"] = Deduction.objects.none()
+    return payslip_data
 
 
 def compute_salary_on_period(employee, start_date, end_date, wage=None):

@@ -1,0 +1,21 @@
+{% load i18n %}
+<div class="oh-modal__dialog-header">
+    <span class="oh-modal__dialog-title">
+        {% if location %}{% trans 'Edit Geofence Location' %}{% else %}{% trans 'Add Geofence Location' %}{% endif %}
+    </span>
+    <button class="oh-modal__close" aria-label="Close" data-toggle="oh-modal-toggle" data-target="#objectCreateModal">
+        <ion-icon name="close-outline"></ion-icon>
+    </button>
+</div>
+<div class="oh-modal__dialog-body">
+    <form hx-post="{% if location %}{% url 'geo-config-update' location.id %}{% else %}{% url 'geo-config-create' %}{% endif %}"
+        hx-target="{% if location %}#objectUpdateModalTarget{% else %}#objectCreateModalTarget{% endif %}" hx-swap="innerHTML">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="oh-modal__dialog-footer mt-3">
+            <button type="submit" class="oh-btn oh-btn--secondary">
+                {% trans 'Save' %}
+            </button>
+        </div>
+    </form>
+</div>
