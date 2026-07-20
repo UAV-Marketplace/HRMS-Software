@@ -20,16 +20,21 @@ SUBMENUS = [
         "redirect": reverse("view-contract"),
         "accessibility": "payroll.sidebar.dasbhoard_accessibility",
     },
-    {
-        "menu": trans("Allowances"),
-        "redirect": reverse("view-allowance"),
-        "accessibility": "payroll.sidebar.allowance_accessibility",
-    },
-    {
-        "menu": trans("Deductions"),
-        "redirect": reverse("view-deduction"),
-        "accessibility": "payroll.sidebar.deduction_accessibility",
-    },
+    # Allowances/Deductions are hidden: the CTC-based salary engine (see
+    # payroll.methods.methods.generate_ctc_payslip_data) computes Basic/HRA/
+    # PF/ESIC/PT itself and doesn't read these tables for "monthly" wage-type
+    # contracts, which is currently 100% of active contracts. Re-add these
+    # two entries if daily/hourly-wage employees are introduced.
+    # {
+    #     "menu": trans("Allowances"),
+    #     "redirect": reverse("view-allowance"),
+    #     "accessibility": "payroll.sidebar.allowance_accessibility",
+    # },
+    # {
+    #     "menu": trans("Deductions"),
+    #     "redirect": reverse("view-deduction"),
+    #     "accessibility": "payroll.sidebar.deduction_accessibility",
+    # },
     {
         "menu": trans("Payslips"),
         "redirect": reverse("view-payslip"),

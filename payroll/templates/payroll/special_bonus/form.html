@@ -13,10 +13,5 @@
         hx-target="{% if instance_id %}#objectUpdateModalTarget{% else %}#objectCreateModalTarget{% endif %}" hx-swap="innerHTML">
         {% csrf_token %}
         {{ form.as_p }}
-        <div class="oh-modal__dialog-footer mt-3">
-            <button type="submit" class="oh-btn oh-btn--secondary">
-                {% trans 'Save' %}
-            </button>
-        </div>
     </form>
 </div>

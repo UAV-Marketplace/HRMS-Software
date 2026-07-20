@@ -181,7 +181,7 @@ class Contract(HorillaModel):
         default="monthly",
         verbose_name=_("Pay Frequency"),
     )
-    wage = models.FloatField(verbose_name=_("Basic Salary"), null=True, default=0)
+    wage = models.FloatField(verbose_name=_("CTC"), null=True, default=0)
     filing_status = models.ForeignKey(
         FilingStatus,
         on_delete=models.PROTECT,
