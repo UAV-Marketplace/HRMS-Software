@@ -131,9 +131,7 @@ dmypy.json
 *.pyc
 
 # migration files
-**/migrations/**
-!**/migrations
-!**/migrations/__init__.py
+# Don't ignore Django migrations
 
 # media file
 media/
