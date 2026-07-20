@@ -36,6 +36,7 @@ from payroll.models.models import (
     PayslipAutoGenerate,
     Reimbursement,
     ReimbursementMultipleAttachment,
+    SpecialBonus,
 )
 from payroll.widgets import component_widgets as widget
 
@@ -732,6 +733,37 @@ class LoanAccountForm(ModelForm):
                 )
 
         return cleaned_data
+
+
+class SpecialBonusForm(ModelForm):
+    """
+    SpecialBonusForm
+    """
+
+    verbose_name = _("Special Bonus")
+
+    class Meta:
+        model = SpecialBonus
+        fields = "__all__"
+        exclude = ["is_active", "given_by", "company_id"]
+        widgets = {
+            "bonus_date": forms.DateInput(attrs={"type": "date"}),
+            "reason": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def as_p(self):
+        """
+        Render the form fields as HTML table rows with Bootstrap styling.
+        """
+        context = {"form": self}
+        table_html = render_to_string("common_form.html", context)
+        return table_html
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.initial["bonus_date"] = str(datetime.date.today())
+        if self.instance.pk:
+            self.verbose_name = self.instance.title
 
 
 class AssetFineForm(LoanAccountForm):

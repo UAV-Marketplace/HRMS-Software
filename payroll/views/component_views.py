@@ -5,6 +5,7 @@ This module is used to write methods to the component_urls patterns respectively
 """
 
 import json
+import logging
 import math
 import operator
 from collections import defaultdict
@@ -87,8 +88,11 @@ from payroll.models.models import (
     Payslip,
     Reimbursement,
     ReimbursementMultipleAttachment,
+    SpecialBonus,
 )
 from payroll.threadings.mail import MailSendThread
+
+logger = logging.getLogger(__name__)
 
 
 def return_none(a, b):
@@ -1474,6 +1478,70 @@ def delete_loan(request):
         else:
             messages.error(request, "Loan account cannot be deleted")
     return redirect(view_loans)
+
+
+@login_required
+def view_special_bonus(request):
+    """
+    Shows every Special Bonus to users with payroll.view_specialbonus (HR /
+    management); everyone else only sees the bonuses granted to themselves.
+    """
+    if request.user.has_perm("payroll.view_specialbonus"):
+        records = SpecialBonus.objects.all()
+    else:
+        records = SpecialBonus.objects.filter(
+            employee_id__employee_user_id=request.user
+        )
+    records = sortby(request, records, "sortby")
+    return render(
+        request,
+        "payroll/special_bonus/view_special_bonus.html",
+        {"records": paginator_qry(records, request.GET.get("page"))},
+    )
+
+
+@login_required
+@hx_request_required
+@permission_required("payroll.add_specialbonus")
+def create_special_bonus(request):
+    """
+    This method is used to create and update a Special Bonus instance
+    """
+    instance_id = eval_validate(str(request.GET.get("instance_id")))
+    instance = SpecialBonus.objects.filter(id=instance_id).first()
+    form = forms.SpecialBonusForm(instance=instance)
+    if request.method == "POST":
+        form = forms.SpecialBonusForm(request.POST, instance=instance)
+        if form.is_valid():
+            bonus = form.save()
+            messages.success(request, _("Special Bonus granted successfully."))
+            try:
+                notify.send(
+                    request.user.employee_get,
+                    recipient=bonus.employee_id.employee_user_id,
+                    verb=f"You have been granted a special bonus: {bonus.title}.",
+                    icon="gift",
+                )
+            except Exception:
+                logger.error("Could not notify employee about special bonus")
+            return HorillaRedirect(request)
+    return render(
+        request,
+        "payroll/special_bonus/form.html",
+        {"form": form, "instance_id": instance_id},
+    )
+
+
+@login_required
+@permission_required("payroll.delete_specialbonus")
+def delete_special_bonus(request):
+    """
+    Delete special bonus records
+    """
+    ids = request.GET.getlist("ids")
+    SpecialBonus.objects.filter(id__in=ids).delete()
+    messages.success(request, _("Special Bonus deleted."))
+    return redirect(view_special_bonus)
 
 
 @login_required

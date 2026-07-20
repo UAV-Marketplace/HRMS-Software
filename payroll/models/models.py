@@ -1565,6 +1565,59 @@ class LoanAccount(HorillaModel):
         super().save(*args, **kwargs)
 
 
+class SpecialBonus(HorillaModel):
+    """
+    A one-time, discretionary cash reward management can grant to any
+    employee at any time. Unrelated to the employee's CTC/contract — it does
+    not affect Basic Pay, PF, ESIC, Gratuity, or Professional Tax, and is
+    added straight to Gross/Net Pay on the payslip covering its date.
+    """
+
+    employee_id = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="special_bonuses",
+        verbose_name=_("Employee"),
+    )
+    title = models.CharField(max_length=100, verbose_name=_("Title"))
+    amount = models.FloatField(verbose_name=_("Amount"))
+    bonus_date = models.DateField(default=timezone.now, verbose_name=_("Date"))
+    reason = models.TextField(blank=True, null=True, verbose_name=_("Reason"))
+    given_by = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        editable=False,
+        related_name="special_bonuses_given",
+        verbose_name=_("Given By"),
+    )
+    company_id = models.ForeignKey(
+        Company, null=True, editable=False, on_delete=models.PROTECT
+    )
+    objects = HorillaCompanyManager("employee_id__employee_work_info__company_id")
+
+    class Meta:
+        verbose_name = _("Special Bonus")
+        verbose_name_plural = _("Special Bonuses")
+        ordering = ["-bonus_date"]
+
+    def __str__(self):
+        return f"{self.title} - {self.employee_id}"
+
+    def save(self, *args, **kwargs):
+        request = getattr(horilla_middlewares._thread_locals, "request", None)
+        if request:
+            selected_company = request.session.get("selected_company")
+            if not self.id and not self.company_id and selected_company and selected_company != "all":
+                self.company_id = Company.find(selected_company)
+            if not self.id and not self.given_by:
+                given_by = getattr(request.user, "employee_get", None)
+                if given_by:
+                    self.given_by = given_by
+        super().save(*args, **kwargs)
+
+
 class ReimbursementMultipleAttachment(models.Model):
     """
     ReimbursementMultipleAttachement Model

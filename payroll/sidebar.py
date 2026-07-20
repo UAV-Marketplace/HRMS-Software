@@ -35,6 +35,10 @@ SUBMENUS = [
         "redirect": reverse("view-payslip"),
     },
     {
+        "menu": trans("Special Bonus"),
+        "redirect": reverse("view-special-bonus"),
+    },
+    {
         "menu": trans("Loan / Advanced Salary"),
         "redirect": reverse("view-loan"),
         "accessibility": "payroll.sidebar.loan_accessibility",

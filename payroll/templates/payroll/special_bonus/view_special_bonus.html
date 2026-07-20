@@ -1,0 +1,91 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load i18n static horillafilters %}
+<div class="oh-wrapper">
+    <div id="ohSpecialBonusMessages"></div>
+    {% if messages %}
+    <div class="oh-alert-container">
+        {% for message in messages %}
+        <div class="oh-alert oh-alert--animated {{message.tags}}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="oh-inner-sidebar-content__header d-flex justify-content-between align-items-center pb-3">
+        <h2 class="oh-inner-sidebar-content__title">{% trans 'Special Bonus' %}</h2>
+        {% if perms.payroll.add_specialbonus %}
+        <button class="oh-btn oh-btn--secondary oh-btn--shadow" hx-target="#objectCreateModalTarget" type="button"
+            hx-get="{% url 'create-special-bonus' %}"
+            data-toggle="oh-modal-toggle" data-target="#objectCreateModal">
+            <ion-icon name="add-outline" class="me-1"></ion-icon>
+            {% trans 'Give Bonus' %}
+        </button>
+        {% endif %}
+    </div>
+
+    {% if records %}
+    <div class="oh-sticky-table">
+        <div class="oh-sticky-table__table oh-table--sortable">
+            <div class="oh-sticky-table__thead">
+                <div class="oh-sticky-table__tr">
+                    <div class="oh-sticky-table__sd">{% trans 'Employee' %}</div>
+                    <div class="oh-sticky-table__th">{% trans 'Title' %}</div>
+                    <div class="oh-sticky-table__th">{% trans 'Amount' %}</div>
+                    <div class="oh-sticky-table__th">{% trans 'Date' %}</div>
+                    <div class="oh-sticky-table__th">{% trans 'Given By' %}</div>
+                    {% if perms.payroll.change_specialbonus or perms.payroll.delete_specialbonus %}
+                    <div class="oh-sticky-table__th">{% trans 'Actions' %}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="oh-sticky-table__tbody">
+                {% for record in records %}
+                <div class="oh-sticky-table__tr">
+                    <div class="oh-sticky-table__sd">{{ record.employee_id }}</div>
+                    <div class="oh-sticky-table__td">{{ record.title }}</div>
+                    <div class="oh-sticky-table__td">{{ record.amount|floatformat:2|currency_symbol_position }}</div>
+                    <div class="oh-sticky-table__td">{{ record.bonus_date }}</div>
+                    <div class="oh-sticky-table__td">{{ record.given_by|default:"-" }}</div>
+                    {% if perms.payroll.change_specialbonus or perms.payroll.delete_specialbonus %}
+                    <div class="oh-sticky-table__td">
+                        <div class="oh-btn-group">
+                            {% if perms.payroll.change_specialbonus %}
+                            <a hx-get="{% url 'create-special-bonus' %}?instance_id={{ record.id }}"
+                                hx-target="#objectUpdateModalTarget" type="button" data-toggle="oh-modal-toggle"
+                                data-target="#objectUpdateModal"
+                                class="oh-btn oh-btn--light-bkg w-50" title="{% trans 'Edit' %}">
+                                <ion-icon name="create-outline"></ion-icon></a>
+                            {% endif %}
+                            {% if perms.payroll.delete_specialbonus %}
+                            <form class="w-50" hx-confirm="{% trans 'Are you sure you want to delete this special bonus?' %}"
+                                hx-post="{% url 'delete-special-bonus' %}?ids={{ record.id }}">
+                                {% csrf_token %}
+                                <button type="submit" class="oh-btn oh-btn--danger-outline oh-btn--light-bkg w-100"
+                                    title="{% trans 'Delete' %}">
+                                    <ion-icon name="trash-outline"></ion-icon>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="oh-empty">
+        <img src="{% static 'images/ui/search.svg' %}" class="oh-404__image" alt="No records" />
+        <h1 class="oh-empty__title">{% trans "No Records found." %}</h1>
+        <p class="oh-empty__subtitle">
+            {% if perms.payroll.view_specialbonus %}
+                {% trans "No special bonuses have been given yet." %}
+            {% else %}
+                {% trans "You haven't been given any special bonus yet." %}
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock content %}

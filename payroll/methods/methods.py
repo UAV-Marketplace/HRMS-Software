@@ -23,7 +23,7 @@ from base.methods import (
 )
 from base.models import CompanyLeaves, Holidays
 from horilla.methods import get_horilla_model_class
-from payroll.models.models import Contract, Deduction, Payslip
+from payroll.models.models import Contract, Deduction, Payslip, SpecialBonus
 
 
 def get_total_days(start_date, end_date):
@@ -648,6 +648,24 @@ def generate_ctc_payslip_data(employee, start_date, end_date):
             "amount": breakdown["special"],
         },
     ]
+
+    # Special Bonus: a discretionary, one-time reward management can grant an
+    # employee at any time. It is intentionally NOT part of the CTC breakdown
+    # above (no effect on Basic/PF/ESIC/Gratuity/PT) — just added straight to
+    # Gross/Net Pay for any bonus dated within this payslip's period.
+    special_bonuses = SpecialBonus.objects.filter(
+        employee_id=employee, bonus_date__range=(start_date, end_date)
+    )
+    for bonus in special_bonuses:
+        allowances.append(
+            {
+                "allowance_id": None,
+                "title": f"Special Bonus: {bonus.title}",
+                "is_taxable": True,
+                "amount": bonus.amount,
+            }
+        )
+    special_bonus_total = sum(bonus.amount for bonus in special_bonuses)
     post_tax_deductions = [
         {
             "deduction_id": None,
@@ -676,9 +694,11 @@ def generate_ctc_payslip_data(employee, start_date, end_date):
         "employee": employee,
         "contract_wage": fixed_ctc,
         "basic_pay": breakdown["basic"],
-        "gross_pay": breakdown["gross"],
-        "taxable_gross_pay": breakdown["gross"] - breakdown["employee_pf"],
-        "net_pay": breakdown["net"],
+        "gross_pay": breakdown["gross"] + special_bonus_total,
+        "taxable_gross_pay": breakdown["gross"]
+        + special_bonus_total
+        - breakdown["employee_pf"],
+        "net_pay": breakdown["net"] + special_bonus_total,
         "allowances": allowances,
         "paid_days": breakdown["payable_days"],
         "unpaid_days": breakdown["deduction_days"],

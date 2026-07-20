@@ -114,6 +114,21 @@ urlpatterns = [
     path("delete-loan/", component_views.delete_loan, name="delete-loan"),
     path("search-loan/", component_views.search_loan, name="search-loan"),
     path(
+        "view-special-bonus/",
+        component_views.view_special_bonus,
+        name="view-special-bonus",
+    ),
+    path(
+        "create-special-bonus/",
+        component_views.create_special_bonus,
+        name="create-special-bonus",
+    ),
+    path(
+        "delete-special-bonus/",
+        component_views.delete_special_bonus,
+        name="delete-special-bonus",
+    ),
+    path(
         "asset-fine/",
         component_views.asset_fine,
         name="asset-fine",

@@ -729,9 +729,26 @@ class EmployeePasswordResetView(PasswordResetView):
             return HorillaRedirect(self.request)
 
 
+def _password_reset_confirm_form_valid(self, form):
+    """
+    Successfully resetting a password via the emailed link is proof enough
+    that the employee has set their own password — clear is_new_employee so
+    ForcePasswordChangeMiddleware doesn't force them through a second,
+    redundant "change password" gate right after (which confusingly asks
+    for the "old password" they just set).
+    """
+    response = super(PasswordResetConfirmView, self).form_valid(form)
+    user = getattr(form, "user", None)
+    if user is not None and getattr(user, "is_new_employee", False):
+        user.is_new_employee = False
+        user.save()
+    return response
+
+
 setattr(PasswordResetConfirmView, "template_name", "reset_password.html")
 setattr(PasswordResetConfirmView, "form_class", ResetPasswordForm)
 setattr(PasswordResetConfirmView, "success_url", "/")
+setattr(PasswordResetConfirmView, "form_valid", _password_reset_confirm_form_valid)
 
 
 @login_required

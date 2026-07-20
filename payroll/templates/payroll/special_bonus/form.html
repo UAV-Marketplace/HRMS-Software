@@ -1,0 +1,22 @@
+{% load i18n %}
+<div class="oh-modal__dialog-header">
+    <span class="oh-modal__dialog-title">
+        {% if instance_id %}{% trans 'Update Special Bonus' %}{% else %}{% trans 'Give Special Bonus' %}{% endif %}
+    </span>
+    <button class="oh-modal__close" aria-label="Close"
+        data-toggle="oh-modal-toggle" data-target="{% if instance_id %}#objectUpdateModal{% else %}#objectCreateModal{% endif %}">
+        <ion-icon name="close-outline"></ion-icon>
+    </button>
+</div>
+<div class="oh-modal__dialog-body">
+    <form hx-post="{% url 'create-special-bonus' %}{% if instance_id %}?instance_id={{ instance_id }}{% endif %}"
+        hx-target="{% if instance_id %}#objectUpdateModalTarget{% else %}#objectCreateModalTarget{% endif %}" hx-swap="innerHTML">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="oh-modal__dialog-footer mt-3">
+            <button type="submit" class="oh-btn oh-btn--secondary">
+                {% trans 'Save' %}
+            </button>
+        </div>
+    </form>
+</div>
