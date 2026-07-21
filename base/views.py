@@ -729,6 +729,9 @@ class EmployeePasswordResetView(PasswordResetView):
             return HorillaRedirect(self.request)
 
 
+_original_password_reset_confirm_form_valid = PasswordResetConfirmView.form_valid
+
+
 def _password_reset_confirm_form_valid(self, form):
     """
     Successfully resetting a password via the emailed link is proof enough
@@ -736,8 +739,15 @@ def _password_reset_confirm_form_valid(self, form):
     ForcePasswordChangeMiddleware doesn't force them through a second,
     redundant "change password" gate right after (which confusingly asks
     for the "old password" they just set).
+
+    NOTE: must call the ORIGINAL form_valid (captured above, before it gets
+    overwritten below) rather than super() — since this function itself
+    becomes PasswordResetConfirmView.form_valid via setattr, super() from
+    inside it would skip straight past the real implementation (the one that
+    actually calls form.save() to set the new password) to whatever's next
+    in the MRO, silently no-op'ing the password change entirely.
     """
-    response = super(PasswordResetConfirmView, self).form_valid(form)
+    response = _original_password_reset_confirm_form_valid(self, form)
     user = getattr(form, "user", None)
     if user is not None and getattr(user, "is_new_employee", False):
         user.is_new_employee = False
