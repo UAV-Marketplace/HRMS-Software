@@ -6,22 +6,30 @@ from employee.models import Employee
 
 
 class ChatConversation(models.Model):
-    employee = models.OneToOneField(
+    employee = models.ForeignKey(
         Employee,
         on_delete=models.CASCADE,
-        related_name="hr_chat",
+        related_name="hr_chats",
         verbose_name=_("Employee"),
+    )
+    recipient = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="chats_received",
+        verbose_name=_("Recipient"),
+        help_text=_("Which HR contact this thread is with."),
     )
     created_at = models.DateTimeField(auto_now_add=True)
     last_message_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-last_message_at"]
+        unique_together = ("employee", "recipient")
         verbose_name = _("Chat Conversation")
         verbose_name_plural = _("Chat Conversations")
 
     def __str__(self):
-        return f"Chat — {self.employee}"
+        return f"Chat — {self.employee} → {self.recipient}"
 
     def unread_for_hr(self):
         return self.messages.filter(is_read_by_hr=False).count()

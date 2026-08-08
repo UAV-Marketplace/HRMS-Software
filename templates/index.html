@@ -596,6 +596,13 @@
             setTimeout(widgetScrollBottom, 250);
         };
 
+        window.loadWidgetRecipient = function (recipientId) {
+            htmx.ajax('GET', '/chat/widget/?to=' + recipientId, {
+                target: '#chatWidgetBody', swap: 'innerHTML'
+            });
+            setTimeout(widgetScrollBottom, 250);
+        };
+
         window.loadWidgetHome = function () {
             widgetLoaded = false;
             htmx.ajax('GET', '{% url "chat-widget" %}', {
