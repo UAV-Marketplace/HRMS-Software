@@ -61,7 +61,6 @@ SIDEBARS = [
     "offboarding",
     "asset",
     "helpdesk",
-    "project",
     "hr_meeting",
     "lms",
     "feedback",
