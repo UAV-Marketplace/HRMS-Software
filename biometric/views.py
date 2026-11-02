@@ -25,7 +25,7 @@ from zk import ZK
 from zk import exception as zk_exception
 
 from attendance.methods.utils import Request
-from attendance.models import AttendanceActivity
+from attendance.models import Attendance, AttendanceActivity
 from attendance.views.clock_in_out import clock_in, clock_out
 from base.methods import get_key_instances, get_pagination
 from employee.models import Employee, EmployeeWorkInformation
@@ -2593,19 +2593,37 @@ def etimeoffice_biometric_attendance_logs(device):
             datetime=attendance_datetime,
         )
 
-        last_none_activity = (
-            AttendanceActivity.objects.filter(
-                employee_id=employee.employee_id,
-                clock_out=None,
-            )
-            .order_by("in_datetime")
-            .last()
-        )
+        has_clocked_in_today = Attendance.objects.filter(
+            employee_id=employee.employee_id,
+            attendance_clock_in_date=attendance_datetime.date(),
+        ).exists()
 
-        if last_none_activity:
-            clock_out(request_data)
-        else:
+        if not has_clocked_in_today:
+            # First punch of the day -> check-in
             clock_in(request_data)
+        else:
+            # Any punch after the first one -> check-out, updating the
+            # check-out time each time instead of toggling back to check-in
+            open_activity_exists = AttendanceActivity.objects.filter(
+                employee_id=employee.employee_id,
+                clock_in_date=attendance_datetime.date(),
+                clock_out=None,
+            ).exists()
+            if not open_activity_exists:
+                last_activity = (
+                    AttendanceActivity.objects.filter(
+                        employee_id=employee.employee_id,
+                        clock_in_date=attendance_datetime.date(),
+                    )
+                    .order_by("in_datetime")
+                    .last()
+                )
+                if last_activity:
+                    last_activity.clock_out = None
+                    last_activity.clock_out_date = None
+                    last_activity.out_datetime = None
+                    last_activity.save()
+            clock_out(request_data)
 
     last_log = punch_data[0]
     device.last_fetch_date, device.last_fetch_time = (
