@@ -446,9 +446,20 @@ def clock_out_attendance_and_activity(employee, date_today, now, out_datetime=No
             duration = duration + total_seconds
         duration = format_time(duration)
         # update clock out of attendance
-        attendance = Attendance.objects.filter(employee_id=employee).order_by(
-            "-attendance_date", "-id"
-        )[0]
+        attendance = (
+            Attendance.objects.filter(
+                employee_id=employee,
+                attendance_date=attendance_activity.attendance_date,
+            )
+            .order_by("-id")
+            .first()
+        )
+        if attendance is None:
+            # Fallback, should not normally happen since clock-in always
+            # creates a matching Attendance for the activity's date
+            attendance = Attendance.objects.filter(employee_id=employee).order_by(
+                "-attendance_date", "-id"
+            )[0]
         attendance.attendance_clock_out = now + ":00"
         attendance.attendance_clock_out_date = date_today
         attendance.attendance_worked_hour = duration
