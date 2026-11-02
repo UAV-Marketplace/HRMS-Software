@@ -30,26 +30,6 @@ SUBMENUS = [
         "accessibility": "employee.sidebar.document_accessibility",
     },
     {
-        "menu": trans("Shift Requests"),
-        "redirect": reverse("shift-request-view"),
-        "accessibility": "employee.sidebar.shift_request_accessibility",
-    },
-    {
-        "menu": trans("Work Type Requests"),
-        "redirect": reverse("work-type-request-view"),
-        "accessibility": "employee.sidebar.work_type_request_accessibility",
-    },
-    {
-        "menu": trans("Rotating Shift Assign"),
-        "redirect": reverse("rotating-shift-assign"),
-        "accessibility": "employee.sidebar.rotating_shift_accessibility",
-    },
-    {
-        "menu": trans("Rotating Work Type Assign"),
-        "redirect": reverse("rotating-work-type-assign"),
-        "accessibility": "employee.sidebar.rotating_work_type_accessibility",
-    },
-    {
         "menu": trans("Disciplinary Actions"),
         "redirect": reverse("disciplinary-actions"),
     },
@@ -77,30 +57,6 @@ def profile_accessibility(request, submenu, user_perms, *args, **kwargs):
 def document_accessibility(request, submenu, user_perms, *args, **kwargs):
     return request.user.has_perm(
         "horilla_documents.view_documentrequest"
-    ) or is_reportingmanager(request.user)
-
-
-def shift_request_accessibility(request, submenu, user_perms, *args, **kwargs):
-    return request.user.has_perm("base.view_shiftrequest") or is_reportingmanager(
-        request.user
-    )
-
-
-def work_type_request_accessibility(request, submenu, user_perms, *args, **kwargs):
-    return request.user.has_perm("base.view_worktyperequest") or is_reportingmanager(
-        request.user
-    )
-
-
-def rotating_shift_accessibility(request, submenu, user_perms, *args, **kwargs):
-    return request.user.has_perm(
-        "base.view_rotatingshiftassign"
-    ) or is_reportingmanager(request.user)
-
-
-def rotating_work_type_accessibility(request, submenu, user_perms, *args, **kwargs):
-    return request.user.has_perm(
-        "base.view_rotatingworktypeassign"
     ) or is_reportingmanager(request.user)
 
 
