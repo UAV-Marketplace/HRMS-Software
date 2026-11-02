@@ -32,10 +32,12 @@ SUBMENUS = [
     {
         "menu": trans("Shift Requests"),
         "redirect": reverse("shift-request-view"),
+        "accessibility": "employee.sidebar.shift_request_accessibility",
     },
     {
         "menu": trans("Work Type Requests"),
         "redirect": reverse("work-type-request-view"),
+        "accessibility": "employee.sidebar.work_type_request_accessibility",
     },
     {
         "menu": trans("Rotating Shift Assign"),
@@ -76,6 +78,18 @@ def document_accessibility(request, submenu, user_perms, *args, **kwargs):
     return request.user.has_perm(
         "horilla_documents.view_documentrequest"
     ) or is_reportingmanager(request.user)
+
+
+def shift_request_accessibility(request, submenu, user_perms, *args, **kwargs):
+    return request.user.has_perm("base.view_shiftrequest") or is_reportingmanager(
+        request.user
+    )
+
+
+def work_type_request_accessibility(request, submenu, user_perms, *args, **kwargs):
+    return request.user.has_perm("base.view_worktyperequest") or is_reportingmanager(
+        request.user
+    )
 
 
 def rotating_shift_accessibility(request, submenu, user_perms, *args, **kwargs):
